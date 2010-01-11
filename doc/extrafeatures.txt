@@ -1,0 +1,103 @@
+/** \page extra_features Extra Features
+ *
+ * \section feature_ctrl_sec Live Control Feature
+ *
+ * Usually the module is configured by rfm12_init() using the values defined in the configuration header.
+ * However, one might want to change the frequency, baud rate or other settings during operation, for example to implement
+ * channel hopping or a radio scanner to find frequencies which are in use. By setting RFM12_LIVECTRL to 1 in the configuration
+ * header, additional functions are enabled to conveniently reprogram the module during runtime. These live control functions
+ * can be found in rfm12_ctrl.h. You do not need to include this header, this is already done by rfm12.h.
+ * Currently there are only functions to set the baud rate and frequency.
+ *
+ * The baud rate is set by rfm12_set_rate() and the frequency is set by rfm12_set_frequency().
+ * Both accept a parameter that has to be calculated according to the RF12 datasheet.
+ * The configuration header utilizes macros to calculate these parameter values during compile time.
+ * However, these macros are not included as real code, to reduce the size of the binary.
+ *
+ * You could implement these calculations by yourself, or create lookup-tables with precomputed values
+ * for specific baud rates and frequencies. This way you can support a set of the most common baud rates
+ * or have a fixed frequency hopping schedule.
+ *
+ * The macros for baud rate calculation are RFM12_DATARATE_CALC_HIGH() and RFM12_DATARATE_CALC_LOW().
+ * Refer to the \ref conf_rfm12_sec "RFM12 configuration section" for usage examples.
+ * The frequency parameters can be obtained by using RFM12_FREQUENCY_CALC_433(), RFM12_FREQUENCY_CALC_868() or
+ * RFM12_FREQUENCY_CALC_915(), each for the specific frequency band.
+ *
+ * You will have to include rfm12_hw.h for the macros to work.
+ *
+ * \section feature_ask_sec ASK Modulation Feature
+ *
+ * Although the RF12 modules do not support ASK (amplitude shift keying) modulation natively
+ * it is still possible to emulate it in software. In contrast to FSK (frequency shift keying)
+ * where ones and zeroes are encoded using different frequencies, ASK encodes data using the
+ * amplitude of a radio signal. The following subsections explain how this library emulates
+ * ASK data transmission and reception.
+ *
+ * \subsection feature_ask_rx ASK Data Reception
+ *
+ * To decode ASK modulated data, one needs to measure the amplitude of a radio signal and
+ * map it to ones or zeroes. Luckily the RFM12 provides an analog RSSI (receive signal strength indicator) pin,
+ * which can be attached to the ADC of an AVR microcontroller in order to measure the signal strength.
+ * As the signal strength can be interpreted as the amplitude it is possible to decode an ASK signal
+ * by setting a threshold and mapping all signal strength measurements greater than that threshold to ones and the
+ * other ones to zero respectively. This library provides an ADC interrupt which is able to decode ASK signals.
+ *
+ * To use the ASK receive mode, just set RFM12_RECEIVE_ASK to 1 and call adc_init() at the beginning of your application.
+ * Received data is stored in ask_rxbuf (rfm12_rfrxbuf_t) and can be read if ask_rxbuf.state is set to RFM12_ASK_STATE_FULL.
+ * The received data is stored as pulse lengths in timer 0 counts inside ask_rxbuf. This way two or more consecutive ones or zeroes
+ * are interpreted as one longer pulse. As every transmission begins with a one (for technical reasons), all even buffer array indices
+ * are pulse lengths of ones, while all even odd indices are zeroes. This is due to the bit packing.
+ * Please note that you have to initialize timer 0 and probably adjust some values in the ADC interrupt service routine to
+ * fit your application.
+ *
+ * \subsection feature_ask_tx ASK Data Transmission
+ *
+ * ASK modulated data transmission is emulated by filling the RF12 transmit buffer with ones and turning the transmitter on and off.
+ * As the RF12 natively uses FSK modulation, the transmitter will generate a carrier signal when turned on and transmitting.
+ * Cheap ASK devices like radio controlled power outlets and the like will interprete the carrier signal as a one and no carrier signal as a zero.
+ * Unfortunately this library does not supply functions to transmit binary data, but supplies functions to control the transmitter and
+ * create ones and zeroes. Encoding data is left to the user.
+ *
+ * The ASK transmission feature is enabled by setting RFM12_TRANSMIT_ASK to 1. ASK transmit mode can be enabled with rfm12_ask_tx_mode(),
+ * while rfm12_tx_on() and rfm12_tx_off() control the transmitter to encode ones and zeroes.
+ *
+ * There are several web-resources in German language which explain the encoding used by radio controlled outlets:
+ * http://www.das-labor.org/wiki/Diskussion:Funkfernbedienung
+ * http://ethersex.de/index.php/HowToRFM12_ASK
+ * 
+ * \section feature_wakeup_sec Wakeup Timer Feature
+ *
+ * The RF12 supports a wakeup timer mode that only consumes a few microamperes of power. This is useful if you want to save battery
+ * life by putting your microcontroller to sleep and just let it wake up periodically to check if there's anything new.
+ * The library can put the module into this mode and handle wakeup interrupts by setting RFM12_USE_WAKEUP_TIMER to 1.
+ * When the wakeup timer feature is enabled, the function rfm12_set_wakeup_timer() will become available. Although the function
+ * is located in rfm12_extra.h, you won't need to include this header, as this is already done by rfm12.h.
+ * 
+ * It is advised to configure the wakeup timer once after calling rfm12_init(), though you could re-configure it anytime, theoretically.
+ * The function accepts a parameter which has to be formatted according to the RF12 datasheet. The wakeup timer period can be configured
+ * from 1ms to a span of multiple days.
+ *
+ * There might be some problems when using the wakeup timer. It will work properly most of the time, but in some situations,
+ * it never wakes up the microcontroller from sleep mode, effectively stopping your application. This is due to missed interrupts.
+ * Upon every wakeup interrupt, the wakeup timer has to be reset. It might occur that an wakeup timer intterupt flag is not interpreted
+ * correctly by the interrupt when transmissions take place, thereby not resetting the wakeup mode.
+ * These problems also seem to be application and configuration specific. Depending on the library configuration,
+ * there are more or less opportunities to miss an interrupt. Disabling the receive mode, for example, should reduce the errors,
+ * but on the other hand, a disabled collision detection reduces the libraries chances to recover,
+ * as the collision detection might reset failed interrupt states.
+ *
+ * If you experience any unsolvable problems, try to make the interrupt routine non-interruptible by removing the ISR_NOBLOCK parameter from
+ * its function definition and set the interrupt to negative-level triggered, instead of negative-edge triggered.
+ * 
+ * \section feature_lbd_sec Low-Battery Detector Feature
+ *
+ * The RF12 also has a built-in low-battery detector. To use this feature, define RFM12_LOW_POWER as 1 in the configuration header and use
+ * rfm12_set_batt_detector() to set the threshold voltage on which an alarm is generated and rfm12_get_batt_status() to retreive the
+ * current battery status. The battery voltage threshold can be set anywhere from 2.2 volts to the supply voltage of the module in 0.1V increments.
+ * To use this feature, you do not need to include rfm12_extra.h, as this is already done by rfm12.h.
+ *
+ * To set the threshold voltage you need to pass a parameter which is calculated according to the RF12 datasheet to rfm12_set_batt_detector();
+ * The formula is Vlb = 2.2 + (val * 0.1), where Vlb is the threshold voltage and val is the parameter. rfm12_get_batt_status() will return
+ * \ref batt_states "RFM12_BATT_OKAY" or \ref batt_states "RFM12_BATT_LOW" to indicate the current battery status.
+ *
+ */

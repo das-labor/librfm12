@@ -1,0 +1,357 @@
+/** \mainpage rfm12lib Library Documentation
+ *
+ * \image html avr_rfm12.png "rfm12lib"
+ *
+ * \section intro_sec Introduction
+ *
+ * rfm12lib is an open source library for Atmel AVR microcontrollers that allows you
+ * to hook up RF12 modules (<a href="http://www.hoperf.com/pro/RFM12.html">RFM12</a>)
+ * from <a href="http://www.hoperf.com/">HopeRF</a> to your microcontroller and add
+ * wireless functionaility to your project. It is written in C and requires the free AVR-GCC compiler.
+ * The library supports modules of all frequency bands.
+ *
+ * This documentation will give you a short overview on how to connect and operate the RF12 modules.
+ * It assumes that you have some prior knowledge of C programming. However, no special knowledge about the modules
+ * or wireless communication is necessary, unless you want to hack the library itself. The documentation only covers
+ * the user API, but excludes library internals. If you wish to extend the library, please have a look at the source code
+ * itself, as it claims to be commented quite thoroughly.
+ *
+ * Got the library but no modules yet?\n
+ * There are several suppliers of the RFM12. If you happen to live in germany and need low quantities, you could have a look
+ * at the <a href="http://www.pollin.de/">pollin online store</a>, which sells them but tends to be expensive.
+ * If you need quantities above 10 modules, you are advised to contact the manufacturer directly,
+ * as they might be cheaper overall (including shipping). Otherwise, Google is your friend.
+ *
+ * The library and all its sources are licensed under the terms of the GPL version 2 or later.
+ *
+ * The project page of this library might contain some additional information, as well as the <b>download links</b>. \n
+ * It is located here: <a href="http://www.das-labor.org/wiki/RFM12_library/en"><b>http://www.das-labor.org/wiki/RFM12_library/en</b></a>
+ * (also available in <a href="http://www.das-labor.org/wiki/RFM12_library"><b>German</b></a>).
+ *
+ * If you have any comments, suggestions or bug reports, please don't hesitate to contact us via <b>info <&Auml;T> das-labor.org</b> . \n
+ * We're also happy to receive patches, given the case you already modified the library and added or changed some meaningful stuff.
+ *
+ * \section feat_sec Library Features
+ *
+ * - Basic packet format, including:
+ *  - An 8-bit (0..255) packet type or address field
+ *  - Packet length up to 255 bytes
+ *  - A simple header checksum
+ * - Interrupt or polling based packet transfer handling
+ * - Multiple frequency bands, depending on the used module (433, 868 and 915 MHz)
+ * - Collision avoidance (carrier sense)
+ * - Usage of synchronization patterns to start data reception
+ * - Hardware or software SPI support
+ * - Transmit only mode, to reduce the size of the binary
+ * - Basic ASK (amplitude shift keying) receive and transmit functionality (for radio controlled outlets and the like)
+ * - Low-battery detection feature (using the RFM12)
+ * - Low-power Wakeup timer feature (using the RFM12)
+ *
+ * \ref extra_features "This page" has a more in-depth explanation and usage description of the extra features.
+ *
+ * \section getstarted_sec Getting Started
+ *  
+ * Although it is recommended to have a look at the documentation first, you could also just begin to use the library.
+ *
+ * You will have to connect the module to your AVR microcontroller. The section \ref hard_sec "hardware" explains how to connect the module.
+ * Otherwise it's enough to just solder the SPI port pins appropriately to the hardware SPI port of your AVR and connect the slave select pin anywhere.
+ * In case you are using software SPI, you are free to solder the SPI connections to any port pin of the AVR and define the connections in software.
+ * Be sure to add an antenna to your module. Usually a short strip of wire is enough.
+ * If you want to have a nicely resonating antenna, use an online calculator to get the right length for a whip (1/4 wave) antenna.
+ * The optimal length for 433MHz is about 17,5cm or 7 inches. However, any shorter strip of wire usually suffices.
+ *
+ * Next you will have to download the library (if you haven't done so yet) and place it somewhere next to your source folder.
+ *
+ * In order to run, the library will need some configuration, which is stored in a header file usually named rfm12_config.h.
+ * See the section \ref conf_sec "Configuration" for more information on how to configure the library.
+ * Otherwise just take the demo configuration header from the library folder, put into your source folder and change the values to your needs.
+ * The library itself will not include the configuration file, you have to do this manually before including the rfm12.h header.
+ * However, the rfm12.c file will need a special wrapper.
+ *
+ * To use the library with your project, it's advised to create two wrapper files, which will simplify your makefile and include the
+ * library configuration. Just create two files, <b>%rfm12.c</b> and <b>%rfm12.h</b> inside your source folder and include the
+ * RFM12 configuration header (usually rfm12_config.h), as well as the real rfm12.c and rfm12.h. \n
+ * Here's an example:
+ *
+ * <b>%rfm12.h</b>
+ * \code
+ * #include "rfm12_config.h"
+ * #include "../rfm12lib/rfm12.h"
+ * \endcode
+ *
+ * <b>%rfm12.c</b>
+ * \code
+ * #include "rfm12_config.h"
+ * #include "../rfm12lib/rfm12.c"
+ * \endcode
+ *
+ * This way the configuration is correctly supplied to the library and you will only need to add rfm12.c to your makefile or project to compile the library.
+ *
+ * Finally, you just need to include your <b>%rfm12.h</b> to use the library!
+ * 
+ * \section use_sec Using the Library
+ *
+ * Using the library to transmit or receive data packets turns out to be incredibly simple. \n
+ * Just do the following:
+ * - At the beginning of your application, call rfm12_init() once to initialize the module
+ * - Call rfm12_tick() periodically, as it will maintain the collision avoidance and start transferring your enqueued packets
+ * - Use the rfm12_tx() function to enqueue a packet for transmission
+ * - Check if a packet has been received via rfm12_rx_status()
+ * - Read packet length, type and contents using rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_buffer()
+ * - Be sure to clear the received packet buffer after reading a packet by calling rfm12_rx_clear()
+ * - If you are using polling instead of the interrupt, you have to call rfm12_poll() periodically to transmit and receive packets. \n
+ *   rfm12_poll() has to be called a lot more often than rfm12_tick(), as it needs to fill or read the 1-byte FIFO of the RFM12 for every byte
+ *   in a transmission.
+ *
+ * Click the function name links to get to the documentation.
+ *
+ * A simple main method to transmit some packets merely consists of the following:
+ * \code
+ * uint8_t teststring[] = "teststring\r\n";
+ * uint8_t packettype = 0xEE;
+ * rfm12_init();  /* initialize the library */
+ * sei();
+ * 
+ * while (23)
+ * {
+ *   /* ... */
+ *   rfm12_tx (sizeof(teststring), packettype, teststring);
+ *   rfm12_tick();  /* periodic tick function - call that one once in a while */
+ * }
+ * \endcode
+ *
+ * There are several extra features. They are explained \ref extra_features "here".
+ *
+ * Some example projects for an ATmega8 can be found in the subdirectory <b>test-m8</b>.
+ *
+ * \section hard_sec Hardware
+ *
+ * If you are using hardware SPI, which is the default, connect the RFM12 to the AVR as follows:
+ * \verbatim
+RFM12           | AVR
+----------------+------------
+SDO             | MISO
+nIRQ            | INT0
+FSK/DATA/nFFS   | VCC
+DCLK/CFIL/FFIT  |  -
+CLK             |  -
+nRES            |  -
+GND             | GND
+ANT             |  -
+VDD             | VCC
+GND             | GND
+nINT/VDI        | -
+SDI             | MOSI
+SCK             | SCK
+nSEL            | Slave select pin defined below
+\endverbatim
+ *
+ * For software SPI users just connect the SDI, SDO and SCK pins of the RF12 module to meaningful pins on your microcontroller
+ * and adapt the configuration header.
+ *
+ * <a href="http://www.hoperf.com/pdf/RFM12.pdf">Here's</a> the RFM12 datasheet for the pinout
+ * and <a href="http://www.hoperf.com/pdf/RF12.pdf">here's</a> the datasheet of the transceiver IC.
+ *
+ * \section conf_sec Configuration
+ *
+ * The configuration file is split into several sections which are explained below.
+ * The library source folder contains a demo configuration file for reference, namely rfm12_config.h.demo.
+ *
+ * \subsection conf_pins_sec Pin Configuration
+ *
+ * The following configuration is necessary for hardware SPI (default). You just need to adjust the port names and pin numbers
+ * (The example uses PORTB/PINB/DDRB). Please refer to your specific AVR datasheet for more information on these names and numbers.
+ *
+ * \code
+ * //Pin that the RFM12's slave select is connected to
+ * #define DDR_SS DDRB
+ * #define PORT_SS PORTB
+ * #define BIT_SS 2
+ * 
+ * //SPI port
+ * #define DDR_SPI DDRB
+ * #define PORT_SPI PORTB
+ * #define PIN_SPI PINB
+ * #define BIT_MOSI 3
+ * #define BIT_MISO 4
+ * #define BIT_SCK  5
+ * #define BIT_SPI_SS 2
+ * \endcode
+ * The BIT_SPI_SS define is the hardware SS pin of the AVR, it needs to be set to output for the spi-interface to work correctly
+ * independently of the CS pin used for the RFM12.
+ *
+ * For software SPI, you shall use the following configuration. Again, you just need to adjust the port and pin names.
+ * This example uses PORTA and PORTC and their respective input (PIN) and direction (DDR) registers.
+ *
+ * \code
+ * //SPI MOSI port
+ * #define DDR_MOSI DDRA
+ * #define PORT_MOSI PORTA
+ *
+ * //SPI MISO port
+ * #define DDR_MISO DDRA
+ * #define PIN_MISO PINA
+ *
+ * //SPI SCK port
+ * #define DDR_SCK DDRC
+ * #define PORT_SCK PORTC
+ *
+ * //SPI SS port
+ * #define DDR_SPI_SS DDRC
+ * #define PORT_SPI_SS PORTC 
+ *
+ * //SPI pin numbers on their respective ports
+ * #define BIT_MOSI 3
+ * #define BIT_MISO 4
+ * #define BIT_SCK  3
+ * #define BIT_SPI_SS 4
+ * \endcode
+ * Even when you are using hardware SPI, you could still use this more detailed pin configuration,
+ * but then you still have to include the hardware SPI SS defines and match the port and pins to your hardware SPI port.
+ *
+ * \subsection conf_rfm12_sec RFM12 Configuration
+ *
+ * The following section configures RFM12 related stuff, such as the exact frequency to use, the baudrate and the buffer sizes.
+ *
+ * \code
+ * //baseband of the module (either RFM12_BAND_433, RFM12_BAND_868 or RFM12_BAND_912)
+ * #define RFM12_BASEBAND RFM12_BAND_433
+ * 
+ * //center frequency to use (+-125kHz FSK frequency shift)
+ * #define FREQ 433175000UL
+ * 
+ * //use this for datarates >= 2700 Baud
+ * #define DATARATE_VALUE RFM12_DATARATE_CALC_HIGH(9600.0)
+ * 
+ * //use this for 340 Baud < datarate < 2700 Baud
+ * //#define DATARATE_VALUE RFM12_DATARATE_CALC_LOW(1200.0)
+ * 
+ * //TX BUFFER SIZE
+ * #define RFM12_TX_BUFFER_SIZE 30
+ * 
+ * //RX BUFFER SIZE (there are going to be 2 Buffers of this size for double_buffering)
+ * #define RFM12_RX_BUFFER_SIZE 30 
+ * \endcode
+ *
+ * The frequency has to be in the frequency band of your module. This is only the center frequency, the
+ * module will need +-125kHz for modulation. The maximum baud rate is 115.2 kbps. \n
+ * Please note that the buffers will consume ram, so be careful when making them larger. \n
+ * If you set all buffers to 255 bytes, which is the maximum packet size, then you will consume 3 * 255 bytes of ram.
+ *
+ * \subsection conf_int_sec Interrupt Configuration
+ *
+ * The RFM12 may use an interrupt to signal various events to the microcontroller. As this library utilizes the interrupt,
+ * you must configure the right interrupt for your AVR device.
+ * Please refer to your specific AVR datasheet for more information on the external interrupts.
+ * The interrupt has to be an external interrupt pin, triggering on a negative edge.
+ *
+ * The following code-snippet configures the interrupt for an ATmega8 to external interrupt 1.
+ *
+ * \code
+ * //the interrupt vector
+ * #define RFM12_INT_VECT (INT1_vect)
+ * 
+ * //the interrupt mask register
+ * #define RFM12_INT_MSK GICR
+ * 
+ * //the interrupt bit in the mask register
+ * #define RFM12_INT_BIT (INT1)
+ * 
+ * //the interrupt flag register
+ * #define RFM12_INT_FLAG GIFR
+ * 
+ * //the interrupt bit in the flag register
+ * #define RFM12_FLAG_BIT (INTF1)
+ * 
+ * //setup the interrupt to trigger on negative edge
+ * #define RFM12_INT_SETUP()   MCUCR |= (1<<ISC11)
+ * \endcode
+ *
+ * \subsection conf_feature_sec Feature Configuration
+ *
+ * The following default code configures the extra features of the library. See \ref extra_features "extra features" for further explanation.
+ *
+ * \code
+ * #define RFM12_LIVECTRL 0
+ * #define RFM12_NORETURNS 0
+ * #define RFM12_NOCOLLISIONDETECTION 0
+ * #define RFM12_TRANSMIT_ONLY 0
+ * #define RFM12_SPI_SOFTWARE 0
+ * #define RFM12_USE_POLLING 0
+ * #define RFM12_RECEIVE_ASK 0
+ * #define RFM12_TRANSMIT_ASK 0
+ * #define RFM12_USE_WAKEUP_TIMER 0
+ * #define RFM12_LOW_POWER 0 
+ * \endcode
+ *
+ * Set \b RFM12_LIVECTRL to 1 to enable a set of functions which allow runtime reconfiguration of the frequency and baud rate.
+ * They are disabled by default to reduce the size of the binary. See rfm12_ctrl.h for the functions.
+ *
+ * Set \b RFM12_NORETURNS to 1 to disable the return values of the transmit functions. This saves some bytes (although very few) in the binary.
+ *
+ * Set \b RFM12_NOCOLLISIONDETECTION to 1 to disable the collision avoidance. This will speed up rfm12_tick() and save a consideable amount
+ * of bytes in the binary. When using transmit only mode, collision avoidance will be disabled anyway, as the receiver is not available then.
+ *
+ * Set \b RFM12_TRANSMIT_ONLY to 1 if you do not need to receive data. This will strip the receiving functionaility of the library completely,
+ * reducing the resulting binary size by a considerable amount of bytes. As the receiver is not available to check for active transmissions
+ * from other transmitters on the selected frequency, collision avoidance would not work and is disabled in this case.
+ *
+ * Set \b RFM12_SPI_SOFTWARE to 1 if you wish to use software SPI instead of hardware SPI.
+ *
+ * Set \b RFM12_USE_POLLING to 1 in case you do not want to use an interrupt for packet handling. This will enable a function named rfm12_poll()
+ * which has to be called periodically to handle packet transfers. rfm12_poll() has to be called a lot more often than rfm12_tick(),
+ * as it needs to fill or read the 1-byte FIFO of the RFM12 for every byte in a transmission.
+ *
+ * Set \b RFM12_RECEIVE_ASK to 1 if you intend to receive ASK (amplitude shift keying) modulated data. Usually this module cannot do that,
+ * but with some soldering and an extra ADC interrupt, you still can receive data from simple devices such as thermometers or wireless outlets,
+ * which tend to use ASK. Note that this feature will use the ADC interrupt of your AVR. See rfm12_extra.h for the functions.
+ *
+ * Set \b RFM12_TRANSMIT_ASK to 1 if you also want to send ASK modulated data. This will provide you with a set of functions to switch into ASK transmit 
+ * mode and to enable or disable the transceiver. Obviously this is a hack. You can emaulate ASK modulated signals with this, by turning on and off
+ * the transmitter, which translates into some amplitude (1) or no amplitude (0). Unfortunately you have to do the proper bit timing and transmit
+ * function yourself. See rfm12_extra.h for the functions.
+ *
+ * Set \b RFM12_USE_WAKEUP_TIMER to 1 to use the wakeup timer feature of the RFM12. When enabling this, there will be a function to set the
+ * wakeup timer, and the interrupt will handle wakeup events. You can use this to put your AVR into sleep mode and let him wake up periodically.
+ * This way you can save huge amounts of power and run your application off of goldcaps for some time or increase battery life.
+ * Sometimes the wakeup timer feature works unstable and requires fine tuning of your application. See \ref extra_features "Extra Features"
+ * for more help on this topic. rfm12_extra.h contains the functions.
+ *
+ * Set \b RFM12_LOW_POWER to 1 to use the low-battery detector feature of the RFM12. If this feature is enabled, the interrupt will recognize
+ * a low battery voltage alert from the RFM12. There are functions in rfm12_extra.h to set the specific warning voltage and to read the
+ * current battery status.
+ *
+ * \section tech_sec Technical Details
+ *
+ * The library utilizes the digital SPI interface of the module for communication. The RFM12 is operated in FIFO mode
+ * in conjunction with an interrupt output to signal various operating states to the microcontroller. Additional module configuration
+ * includes automatic frequency correction in receive mode, as well as sync pattern detection. The sync pattern detection feature of the RFM12
+ * starts filling the receive FIFO only when a predefined synchronization pattern has been received. The specific pattern is prepended
+ * automatically to every packet before transmission by the library.
+ *
+ * The library implements a basic packet format with a one byte type or address field,
+ * a one byte length field and a simple crc check over the header. As the RFM12 only has a 1-byte FIFO,
+ * all packet data transfers from and to the device are encapsulated by an interrupt and several API functions.
+ * Due to this encapsulation, packet header crc values can be generated and verified automatically. Invalid packets
+ * are silently dropped without user notice.
+ * 
+ * To minimize erroneous packet transfers, a simple collision avoidance algorithm has been implemented.
+ * All packet transfers are enqueued into an internal buffer before transmission. A periodically called function (rfm12_tick())
+ * measures if a carrier signal is present, and if so, inhibits further packet transfers for a settable time.
+ * If the selected frequency is free long enough, an enqueud packet transfer will be started by rfm12_tick().
+ *
+ * The interrupt handles FIFO over- and underflow, low-battery detection and wakeup timer events. If a FIFO interrupt occurs,
+ * the current operating state is determined (receiving or transmitting) and the next byte is either read or written to or from the FIFO.
+ *
+ * See \ref extra_features "extra features" for more details about the extra features.
+ *
+ * \section credits_sec Credits
+ *
+ * The library has been created by Hans-Gert Dahmen and Peter Fuhrmann. Some of the extra features have been implemented by Soeren Heisrath.
+ * All main authors are members of <a href="http://www.das-labor.org/">Das LABOR</a>, a hackerspace in Germany.
+ * Thanks to Das LABOR for providing the great infrastructure and environment!
+ *
+ * Thanks to Alexander Krause for contributing a patch that allows frequency bands other than 433MHz to be used.
+ * Thanks to Mikl&oacute;s M&aacute;rton for contributing a fix to the test firmware.
+ * Thanks to Werner Baumann for contributing a patch that fix a bug in fifo interrupt check.
+ */
