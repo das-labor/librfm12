@@ -87,7 +87,9 @@
 //TX BUFFER SIZE
 #define RFM12_TX_BUFFER_SIZE 30
 
-//RX BUFFER SIZE (there are going to be 2 Buffers of this size for double_buffering)
+/* size for the receiving buffer. note that there is actually TWICE the size allocated
+ * because this library implements double buffering.
+ */
 #define RFM12_RX_BUFFER_SIZE 30
 
 
@@ -128,7 +130,14 @@
 #define RFM12_RECEIVE_ASK 0
 #define RFM12_TRANSMIT_ASK 0
 #define RFM12_USE_WAKEUP_TIMER 0
-#define RFM12_LOW_POWER 0
+
+/* use a callback function that is called directly from the
+ * interrupt routine whenever there is a data packet available. When
+ * this value is set to 1, you must use the function
+ * "rfm12_set_callback(your_function)" to point to your
+ * callback function in order to receive packets.
+ */
+#define RFM12_USE_RX_CALLBACK 0
 
 
 /************************

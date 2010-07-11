@@ -52,6 +52,14 @@
 	#include "test-m8/uart.h"
 #endif
 
+#if RFM12_USE_RX_CALLBACK
+	volatile static (*rfm12_rx_callback_func)(uint8_t, uint8_t *) = (void *)0x0000;
+	void rfm12_set_callback ((*in_func)(uint8_t, uint8_t *))
+	{
+		rfm12_rx_callback_func = in_func;
+	}
+#endif
+
 
 /************************
  * library internal globals
@@ -262,10 +270,18 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 				
 				//indicate that the buffer is ready to be used
 				ctrl.rf_buffer_in->status = STATUS_COMPLETE;
-				
+				#if RFM12_USE_RX_CALLBACK
+				if (rfm12_rx_callback_func != 0x0000)
+				{
+					rfm12_rx_callback_func (ctrl.rf_buffer_in->len, ctrl.rf_buffer_in.buffer);
+				}
+				#endif
 				//switch to other buffer
 				ctrl.buffer_in_num = (ctrl.buffer_in_num + 1) % 2;
 				ctrl.rf_buffer_in = &rf_rx_buffers[ctrl.buffer_in_num];
+				#if RFM12_USE_RX_CALLBACK
+				rfm12_rx_clear(); /* clear immediately since the data has been processed by the callback func */
+				#endif
 			#endif /* !(RFM12_TRANSMIT_ONLY) */
 			break;
 			
@@ -291,19 +307,30 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 			ctrl.txstate = STATUS_FREE;
 			
 			//wakeup timer feature
-			#if RFM12_USE_WAKEUP_TIMER
+			#if RFM12_USE_WAKEUP_TIMER && !(RFM12_LIVECTRL)
 				//clear wakeup timer once
 				rfm12_data(ctrl.pwrmgt_shadow & ~RFM12_PWRMGT_EW);
 				//set shadow register to default receive state
 				//the define correctly handles the transmit only mode
-				ctrl.pwrmgt_shadow = (RFM12_CMD_PWRMGT | PWRMGT_RECEIVE);							
+				ctrl.pwrmgt_shadow &= ~(RFM12_PWRMGT_ET); /* disable transmitter */
+				ctrl.pwrmgt_shadow |= (RFM12_CMD_PWRMGT | PWRMGT_RECEIVE);
+			#elif (RFM12_LIVECTRL) && RFM12_USE_WAKEUP_TIMER
+				ctrl.pwrmgt_shadow &= ~(RFM12_PWRMGT_EW);
+				rfm12_data (ctrl.pwrmgt_shadow);
 			#endif /* RFM12_USE_WAKEUP_TIMER */
 				
 			//turn off the transmitter and enable receiver
 			//the receiver is not enabled in transmit only mode
 			//if the wakeup timer is used, this will re-enable the wakeup timer bit
 			//the magic is done via defines
-			rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_RECEIVE);
+			#if RFM12_LIVECTRL && !(RFM12_USE_WAKEUP_TIMER)
+			ctrl.pwrmgt_shadow &= ~(PWRMGT_ET); /* disable transmitter */
+			ctrl.pwrmgt_shadow |= RFM12_CMD_PWRMGT | RFM12_PWRMGT_ER; /* enable receiver */
+			rfm12_data (ctrl.pwrmgt_shadow);
+			#else
+			/* added "| PWRMGT_DEFAULT" - was this missing by mistake or on purpose? - soeren */
+			rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_RECEIVE | PWRMGT_DEFAULT); 
+			#endif
 			
 			//load a dummy byte to clear int status
 			rfm12_data_inline( (RFM12_CMD_TX>>8), 0xaa);
@@ -317,7 +344,12 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 	#if !(RFM12_TRANSMIT_ONLY)
 		rfm12_data_inline(RFM12_CMD_FIFORESET>>8, CLEAR_FIFO_INLINE);
 		rfm12_data_inline(RFM12_CMD_FIFORESET>>8, ACCEPT_DATA_INLINE);
-	#endif /* !(RFM12_TRANSMIT_ONLY) */	
+	#endif /* !(RFM12_TRANSMIT_ONLY) */
+	
+	#if RFM12_LIVECTRL
+	/* execute delayed commands */
+	rfm12_data_delayed (1, 0);
+	#endif
 		
 	END:
 	//turn the int back on
@@ -424,7 +456,12 @@ void rfm12_tick(void)
 		
 		//disable receiver - if you don't do this, tx packets will get lost
 		//as the fifo seems to be in use by the receiver
+		#if RFM12_LIVECTRL || RFM12_USE_WAKEUP_TIMER
+		ctrl.pwrmgt_shadow &= ~(RFM12_PWRMGT_ER);
+		rfm12_data(ctrl.pwrmgt_shadow);
+		#else
 		rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT);
+		#endif
 		
 		//calculate number of bytes to be sent by ISR
 		//2 sync bytes + len byte + type byte + checksum + message length + 1 dummy byte
@@ -437,8 +474,8 @@ void rfm12_tick(void)
 		ctrl.rfm12_state = STATE_TX;
 		
 		//wakeup timer feature
-		#if RFM12_USE_WAKEUP_TIMER		
-			ctrl.pwrmgt_shadow = (RFM12_CMD_PWRMGT | PWRMGT_DEFAULT | RFM12_PWRMGT_ET);
+		#if (RFM12_USE_WAKEUP_TIMER) && !(RFM12_LIVECTRL)
+			ctrl.pwrmgt_shadow |= PWRMGT_DEFAULT;
 		#endif /* RFM12_USE_WAKEUP_TIMER */
 		
 		//fill 2byte 0xAA preamble into data register
@@ -448,7 +485,12 @@ void rfm12_tick(void)
 		rfm12_data(RFM12_CMD_TX | PREAMBLE);
 		
 		//set ET in power register to enable transmission (hint: TX starts now)
+		#if RFM12_LIVECTRL || RFM12_USE_WAKEUP_TIMER
+		ctrl.pwrmgt_shadow |= RFM12_PWRMGT_ET;
+		rfm12_data (ctrl.pwrmgt_shadow);
+		#else
 		rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT | RFM12_PWRMGT_ET);
+		#endif
 
 		//enable the interrupt to continue the transmission
 		RFM12_INT_ON();
@@ -602,6 +644,11 @@ void rfm12_init(void)
 	rfm12_data(RFM12_CMD_RXCTRL | RFM12_RXCTRL_P16_VDI 
 			| RFM12_RXCTRL_VDI_FAST | RFM12_RXCTRL_BW_400 | RFM12_RXCTRL_LNA_6 
 			| RFM12_RXCTRL_RSSI_79 );	
+	#if RFM12_LIVECTRL
+	ctrl.rxctrl_shadow = (RFM12_CMD_RXCTRL | RFM12_RXCTRL_P16_VDI 
+			| RFM12_RXCTRL_VDI_FAST | RFM12_RXCTRL_BW_400 | RFM12_RXCTRL_LNA_6 
+			| RFM12_RXCTRL_RSSI_79 );
+	#endif
 	
 	//automatic clock lock control(AL), digital Filter(!S),
 	//Data quality detector value 3, slow clock recovery lock
@@ -614,9 +661,16 @@ void rfm12_init(void)
 	//set AFC to automatic, (+4 or -3)*2.5kHz Limit, fine mode, active and enabled
 	rfm12_data(RFM12_CMD_AFC | RFM12_AFC_AUTO_KEEP | RFM12_AFC_LIMIT_4
 				| RFM12_AFC_FI | RFM12_AFC_OE | RFM12_AFC_EN);
+	#if RFM12_LIVECTRL
+	ctrl.afc_shadow = (RFM12_CMD_AFC | RFM12_AFC_AUTO_KEEP | RFM12_AFC_LIMIT_4
+				| RFM12_AFC_FI | RFM12_AFC_OE | RFM12_AFC_EN);
+	#endif
 	
 	//set TX Power to -0dB, frequency shift = +-125kHz
 	rfm12_data(RFM12_CMD_TXCONF | RFM12_TXCONF_POWER_0 | RFM12_TXCONF_FS_CALC(125000) );
+	#if RFM12_LIVECTRL
+	ctrl.txconf_shadow = (RFM12_CMD_TXCONF | RFM12_TXCONF_POWER_0 | RFM12_TXCONF_FS_CALC(125000) );
+	#endif
 	
 	//disable low dutycycle mode
 	rfm12_data(RFM12_CMD_DUTYCYCLE);
@@ -673,5 +727,9 @@ void rfm12_init(void)
 	
 	//activate the interrupt
 	RFM12_INT_ON();	
+
+	#if RFM12_LIVECTRL
+	rfm12_set_control_register (&ctrl);
+	#endif
 }
 
