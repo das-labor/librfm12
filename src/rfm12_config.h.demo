@@ -137,3 +137,28 @@
  */
  
 #define RFM12_UART_DEBUG 0
+
+/************************
+ * RX / TX HOOKS
+ *
+ * with this feature you may trigger an LED,
+ * toggle a pin (i.e. for the RFM12BP TX/RX Pin)
+ * Define this only when needed, otherwise comment out.
+ *
+ * Mind that the hook will be run from the Interrupt handler,
+ * so if your code is larger, you may want to implement some
+ * way of deferred execution from the main loop...
+ *
+ * RX_ENTER_HOOK   will be activated whenever the module has filled the
+ *                 FIFO (after the first byte has been received)
+ * RX_LEAVE_HOOK   will be called when receiption is done
+ * TX_ENTER_HOOK   this hook is activated just before we instruct the module
+ *                 to start sending data
+ * TX_LEAVE_HOOK   called when we're done sending
+ */
+
+// Examples:
+// #define RX_ENTER_HOOK (PORTB |= (_BV(PB0))) /* turn RX led on */
+// #define RX_LEAVE_HOOK (PORTB &= ~(_BV(PB0))) /* turn RX led off */
+// #define TX_ENTER_HOOK uart_putstr("sending packet...\n")
+// #define TX_LEAVE_HOOK uart_putstr("packet sent.\n")

@@ -24,8 +24,8 @@
  * \author Hans-Gert Dahmen
  * \author Peter Fuhrmann
  * \author Soeren Heisrath
- * \version 0.9.0
- * \date 08.09.09
+ * \version 1.1.1-experimental
+ * \date 2011/01/13
  *
  * All core functionality is implemented within this file.
  */
@@ -174,6 +174,9 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 		case STATE_RX_IDLE:
 			//if receive mode is not disabled (default)
 			#if !(RFM12_TRANSMIT_ONLY)
+				#ifdef RX_ENTER_HOOK
+					RX_ENTER_HOOK;
+				#endif
 				//init the bytecounter - remember, we will read the length byte, so this must be 1
 				ctrl.bytecount = 1;
 
@@ -260,6 +263,9 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 					uart_putc('D');
 				#endif
 				
+				#ifdef RX_LEAVE_HOOK
+					RX_LEAVE_HOOK;
+				#endif
 				//indicate that the buffer is ready to be used
 				ctrl.rf_buffer_in->status = STATUS_COMPLETE;
 				
@@ -275,6 +281,10 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 				uart_putc('T');
 			#endif
 
+			#ifdef TX_ENTER_HOOK
+				TX_ENTER_HOOK;
+			#endif
+
 			if(ctrl.bytecount < ctrl.num_bytes)
 			{
 				//load the next byte from our buffer struct.
@@ -284,6 +294,9 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 				goto END;
 			}
 			
+			#ifdef TX_LEAVE_HOOK
+				TX_LEAVE_HOOK;
+			#endif
 			/* if we're here, we're finished transmitting the bytes */
 			/* the fifo will be reset at the end of the function */
 			
