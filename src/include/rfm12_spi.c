@@ -22,7 +22,7 @@
  *    THIS FILE IS BEING INCLUDED DIRECTLY		*
  *		(for performance reasons)				*
  ******************************************************/
- 
+
 //hardware spi helper macros
 #define SS_ASSERT() PORT_SS &= ~(1<<BIT_SS)
 #define SS_RELEASE() PORT_SS |= (1<<BIT_SS)
@@ -39,7 +39,7 @@ static uint8_t spi_data(uint8_t c)
 		if(c & 0x80){
 			PORT_MOSI |= (1<<BIT_MOSI);
 		}else{
-			PORT_MOSI &= ~(1<<BIT_MOSI);	
+			PORT_MOSI &= ~(1<<BIT_MOSI);
 		}
 		PORT_SCK |= (1<<BIT_SCK);
 		d<<=1;
@@ -56,7 +56,7 @@ static uint8_t spi_data(uint8_t c)
 
 //non-inlined version of rfm12_data
 //warning: without the attribute, gcc will inline this even if -Os is set
-void __attribute__ ((noinline)) rfm12_data(uint16_t d)
+static void __attribute__ ((noinline)) rfm12_data(uint16_t d)
 {
 	SS_ASSERT();
 	#if !(RFM12_SPI_SOFTWARE)
@@ -65,7 +65,7 @@ void __attribute__ ((noinline)) rfm12_data(uint16_t d)
 
 	SPDR = d & 0xff;
 	while(!(SPSR & (1<<SPIF)));
-	
+
 	#else
 	spi_data(d >> 8   );
 	spi_data(d &  0xff);
@@ -76,11 +76,11 @@ void __attribute__ ((noinline)) rfm12_data(uint16_t d)
 
 //non-inlined version of rfm12_read
 //warning: without the attribute, gcc will inline this even if -Os is set
-uint16_t __attribute__ ((noinline)) rfm12_read(uint16_t c)
+static uint16_t __attribute__ ((noinline)) rfm12_read(uint16_t c)
 {
 	uint16_t retval;
 	SS_ASSERT();
-	
+
 	#if !(RFM12_SPI_SOFTWARE)
 	SPDR = c>>8;
 	while(!(SPSR & (1<<SPIF)));
@@ -88,7 +88,7 @@ uint16_t __attribute__ ((noinline)) rfm12_read(uint16_t c)
 	SPDR = c & 0xff;
 	while(!(SPSR & (1<<SPIF)));
 	retval |= SPDR;
-	
+
 	#else
 	retval =  spi_data(c >> 8   );
 	retval <<= 8;
@@ -102,7 +102,7 @@ uint16_t __attribute__ ((noinline)) rfm12_read(uint16_t c)
 /* @description reads the upper 8 bits of the status
  * register (the interrupt flags)
  */
- uint8_t rfm12_read_int_flags_inline()
+static uint8_t rfm12_read_int_flags_inline()
 {
 	SS_ASSERT();
 	#if !(RFM12_SPI_SOFTWARE)
@@ -113,7 +113,7 @@ uint16_t __attribute__ ((noinline)) rfm12_read(uint16_t c)
 
 	#else
 	unsigned char x, d=d;
-	PORT_MOSI &= ~(1<<BIT_MOSI);	
+	PORT_MOSI &= ~(1<<BIT_MOSI);
 	for(x=0;x<8;x++){
 		PORT_SCK |= (1<<BIT_SCK);
 		d<<=1;
@@ -130,7 +130,7 @@ uint16_t __attribute__ ((noinline)) rfm12_read(uint16_t c)
 
 /* @description inline version of rfm12_data for use in interrupt
  */
-void rfm12_data_inline(uint8_t cmd, uint8_t d)
+static void rfm12_data_inline(uint8_t cmd, uint8_t d)
 {
 	SS_ASSERT();
 	#if !(RFM12_SPI_SOFTWARE)
@@ -139,7 +139,7 @@ void rfm12_data_inline(uint8_t cmd, uint8_t d)
 
 	SPDR = d;
 	while(!(SPSR & (1<<SPIF)));
-	
+
 	#else
 	spi_data( cmd );
 	spi_data( d   );
@@ -150,7 +150,7 @@ void rfm12_data_inline(uint8_t cmd, uint8_t d)
 
 /* @description inline function for reading the fifo
  */
-uint8_t rfm12_read_fifo_inline()
+static uint8_t rfm12_read_fifo_inline()
 {
 	SS_ASSERT();
 
@@ -163,7 +163,7 @@ uint8_t rfm12_read_fifo_inline()
 
 	SS_RELEASE();
 	return SPDR;
-	
+
 	#else
 	uint8_t retval;
 	spi_data( RFM12_CMD_READ >> 8 );
@@ -174,13 +174,13 @@ uint8_t rfm12_read_fifo_inline()
 	#endif
 }
 
-void spi_init()
+static void spi_init()
 {
 	DDR_MOSI   |= (_BV(BIT_MOSI));
 	DDR_SCK    |= (_BV(BIT_SCK));
 	PORT_SPI   |= (_BV(BIT_SPI_SS));
 	DDR_SPI    |= (_BV(BIT_SPI_SS));
-	
+
 	DDR_MISO   &= ~(_BV(BIT_MISO));
 
 	#if !(RFM12_SPI_SOFTWARE)
