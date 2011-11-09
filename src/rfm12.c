@@ -551,7 +551,7 @@ rfm12_tx(uint8_t len, uint8_t type, uint8_t *data)
 			ctrl.rf_buffer_out->status = STATUS_FREE;
 
 			//switch to the other buffer
-			ctrl.buffer_out_num = ctrl.buffer_out_num ^ 1;
+			ctrl.buffer_out_num ^= 1;
 			ctrl.rf_buffer_out = &rf_rx_buffers[ctrl.buffer_out_num];
 
 	}
