@@ -600,8 +600,7 @@ void rfm12_init(void)
 	//set rx parameters: int-in/vdi-out pin is vdi-out,
 	//Bandwith, LNA, RSSI
 	rfm12_data(RFM12_CMD_RXCTRL | RFM12_RXCTRL_P16_VDI 
-			| RFM12_RXCTRL_VDI_FAST | RFM12_RXCTRL_BW_400 | RFM12_RXCTRL_LNA_6 
-			| RFM12_RXCTRL_RSSI_79 );	
+			| RFM12_VDI | RFM12_BW | RFM12_LNA | RFM12_RSSI );
 	
 	//automatic clock lock control(AL), digital Filter(!S),
 	//Data quality detector value 3, slow clock recovery lock
@@ -616,7 +615,7 @@ void rfm12_init(void)
 				| RFM12_AFC_FI | RFM12_AFC_OE | RFM12_AFC_EN);
 	
 	//set TX Power to -0dB, frequency shift = +-125kHz
-	rfm12_data(RFM12_CMD_TXCONF | RFM12_TXCONF_POWER_0 | RFM12_TXCONF_FS_CALC(125000) );
+	rfm12_data(RFM12_CMD_TXCONF | RFM12_TXCONF_POWER_0 | RFM12_TXCONF_FS_CALC(RFM12_FOUT) );
 	
 	//disable low dutycycle mode
 	rfm12_data(RFM12_CMD_DUTYCYCLE);

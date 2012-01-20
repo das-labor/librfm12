@@ -51,18 +51,18 @@
  */
 
 //Pin that the RFM12's slave select is connected to
-#define DDR_SS DDRB
-#define PORT_SS PORTB
-#define BIT_SS 2
+#define DDR_SS		DDRB
+#define PORT_SS		PORTB
+#define BIT_SS		2
 
 //SPI port
-#define DDR_SPI DDRB
-#define PORT_SPI PORTB
-#define PIN_SPI PINB
-#define BIT_MOSI 3
-#define BIT_MISO 4
-#define BIT_SCK  5
-#define BIT_SPI_SS 2
+#define DDR_SPI		DDRB
+#define PORT_SPI	PORTB
+#define PIN_SPI		PINB
+#define BIT_MOSI	3
+#define BIT_MISO	4
+#define BIT_SCK		5
+#define BIT_SPI_SS	2
 //this is the hardware SS pin of the AVR - it 
 //needs to be set to output for the spi-interface to work 
 //correctly, independently of the CS pin used for the RFM12
@@ -73,22 +73,23 @@
  */
 
 //baseband of the module (either RFM12_BAND_433, RFM12_BAND_868 or RFM12_BAND_912)
-#define RFM12_BASEBAND RFM12_BAND_433
+#define RFM12_BASEBAND		RFM12_BAND_433
 
 //center frequency to use (+-125kHz FSK frequency shift)
-#define FREQ 433175000UL
+#define FREQ				433175000UL
 
 //use this for datarates >= 2700 Baud
-#define DATARATE_VALUE RFM12_DATARATE_CALC_HIGH(9600.0)
+#define DATARATE_VALUE		RFM12_DATARATE_CALC_HIGH(9600.0)
 
 //use this for 340 Baud < datarate < 2700 Baud
-//#define DATARATE_VALUE RFM12_DATARATE_CALC_LOW(1200.0)
+//#define DATARATE_VALUE	RFM12_DATARATE_CALC_LOW(1200.0)
 
 //TX BUFFER SIZE
-#define RFM12_TX_BUFFER_SIZE 30
+#define RFM12_TX_BUFFER_SIZE	30
 
-//RX BUFFER SIZE (there are going to be 2 Buffers of this size for double_buffering)
-#define RFM12_RX_BUFFER_SIZE 30
+//RX BUFFER SIZE
+//(there are going to be 2 Buffers of this size for double buffering)
+#define RFM12_RX_BUFFER_SIZE	30
 
 
 /************************
@@ -97,38 +98,96 @@
  */
  
 //the interrupt vector
-#define RFM12_INT_VECT (INT1_vect)
+#define RFM12_INT_VECT		(INT1_vect)
 
 //the interrupt mask register
-#define RFM12_INT_MSK GICR
+#define RFM12_INT_MSK		GICR
 
 //the interrupt bit in the mask register
-#define RFM12_INT_BIT (INT1)
+#define RFM12_INT_BIT		(INT1)
 
 //the interrupt flag register
-#define RFM12_INT_FLAG GIFR
+#define RFM12_INT_FLAG		GIFR
 
 //the interrupt bit in the flag register
-#define RFM12_FLAG_BIT (INTF1)
+#define RFM12_FLAG_BIT		(INTF1)
 
 //setup the interrupt to trigger on negative edge
-#define RFM12_INT_SETUP()   MCUCR |= (1<<ISC11)
+#define RFM12_INT_SETUP()	MCUCR |= (1<<ISC11)
+
+
+/************************
+ * RFM12 RECEIVER CONFIGURATION
+ * look up "Receiver Control Command" in the
+ * datasheet for further information.
+ * HINT: the defaults should be fine.
+ */
+ 
+//VDI (valid data indicator) signal response time
+#define RFM12_VDI		RFM12_RXCTRL_VDI_FAST
+//#define RFM12_VDI		RFM12_RXCTRL_VDI_MEDIUM
+//#define RFM12_VDI		RFM12_RXCTRL_VDI_SLOW
+//#define RFM12_VDI		RFM12_RXCTRL_VDI_ALWAYS_ON
+
+//Receiver baseband bandwidth (BW)
+#define RFM12_BW		RFM12_RXCTRL_BW_400
+//#define RFM12_BW		RFM12_RXCTRL_BW_340
+//#define RFM12_BW		RFM12_RXCTRL_BW_270
+//#define RFM12_BW		RFM12_RXCTRL_BW_200
+//#define RFM12_BW		RFM12_RXCTRL_BW_134
+//#define RFM12_BW		RFM12_RXCTRL_BW_67
+
+//LNA gain
+//#define RFM12_LNA		RFM12_RXCTRL_LNA_0
+#define RFM12_LNA		RFM12_RXCTRL_LNA_6
+//#define RFM12_LNA		RFM12_RXCTRL_LNA_14
+//#define RFM12_LNA		RFM12_RXCTRL_LNA_20
+
+//RSSI detector threshold
+//#define RFM12_RSSI	RFM12_RXCTRL_RSSI_97
+//#define RFM12_RSSI	RFM12_RXCTRL_RSSI_91
+//#define RFM12_RSSI	RFM12_RXCTRL_RSSI_85
+#define RFM12_RSSI		RFM12_RXCTRL_RSSI_79
+//#define RFM12_RSSI	RFM12_RXCTRL_RSSI_73
+//#define RFM12_RSSI	RFM12_RXCTRL_RSSI_67
+//#define RFM12_RSSI	RFM12_RXCTRL_RSSI_61
+
+
+/************************
+ * RFM12 TRANSMITTER CONFIGURATION
+ * look up "TX Configuration Control Command"
+ * in the datasheet for further information.
+ * HINT: the defaults should be fine.
+ */
+ 
+//FSK modulation frequency shift
+#define RFM12_FOUT		125000
+ 
+//Relative Output Power
+#define RFM12_TXPOW		RFM12_TXCONF_POWER_0
+//#define RFM12_TXPOW	RFM12_TXCONF_POWER_2_5
+//#define RFM12_TXPOW	RFM12_TXCONF_POWER_5
+//#define RFM12_TXPOW	RFM12_TXCONF_POWER_7_5
+//#define RFM12_TXPOW	RFM12_TXCONF_POWER_10
+//#define RFM12_TXPOW	RFM12_TXCONF_POWER_12_5
+//#define RFM12_TXPOW	RFM12_TXCONF_POWER_15
+//#define RFM12_TXPOW	RFM12_TXCONF_POWER_17_5
 
 
 /************************
  * FEATURE CONFIGURATION
  */
 
-#define RFM12_LIVECTRL 0
-#define RFM12_NORETURNS 0
+#define RFM12_LIVECTRL		0
+#define RFM12_NORETURNS		0
 #define RFM12_NOCOLLISIONDETECTION 0
-#define RFM12_TRANSMIT_ONLY 0
-#define RFM12_SPI_SOFTWARE 0
-#define RFM12_USE_POLLING 0
-#define RFM12_RECEIVE_ASK 0
-#define RFM12_TRANSMIT_ASK 0
+#define RFM12_TRANSMIT_ONLY	0
+#define RFM12_SPI_SOFTWARE	0
+#define RFM12_USE_POLLING	0
+#define RFM12_RECEIVE_ASK	0
+#define RFM12_TRANSMIT_ASK	0
 #define RFM12_USE_WAKEUP_TIMER 0
-#define RFM12_LOW_POWER 0
+#define RFM12_LOW_POWER		0
 
 
 /************************
