@@ -550,11 +550,10 @@ rfm12_start_tx(uint8_t type, uint8_t length)
 	void __attribute__((noinline)) rfm12_rx_clear(void)
 	{
 			//mark the current buffer as empty
-			ctrl.rf_buffer_out->status = STATUS_FREE;
+			rf_rx_buffers[ctrl.buffer_out_num].status = STATUS_FREE;
 
 			//switch to the other buffer
 			ctrl.buffer_out_num ^= 1;
-			ctrl.rf_buffer_out = &rf_rx_buffers[ctrl.buffer_out_num];
 
 	}
 #endif /* !(RFM12_TRANSMIT_ONLY) */
@@ -635,9 +634,8 @@ void rfm12_init(void)
 	//if receive mode is not disabled (default)
 	#if !(RFM12_TRANSMIT_ONLY)
 		//init buffer pointers
-		ctrl.rf_buffer_out = &rf_rx_buffers[0];
 		ctrl.rf_buffer_in  = &rf_rx_buffers[0];
-		//ctrl.buffer_in_num = 0;
+		ctrl.buffer_in_num = 0;
 		//ctrl.buffer_out_num = 0;
 	#endif /* !(RFM12_TRANSMIT_ONLY) */
 

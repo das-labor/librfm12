@@ -17,7 +17,7 @@
  *
  * @author Peter Fuhrmann, Hans-Gert Dahmen, Soeren Heisrath
  */
- 
+
 /** \file rfm12.h
  * \brief rfm12 library main header
  * \author Hans-Gert Dahmen
@@ -36,7 +36,7 @@
  *      ( thou shalt not change lines below )         *
  *                                                    *
  ******************************************************/
- 
+
 #ifndef _RFM12_H
 #define _RFM12_H
 
@@ -87,10 +87,14 @@ void rfm12_tick(void);
 #if (RFM12_NORETURNS)
 //see rfm12.c for more documentation
 void rfm12_start_tx(uint8_t type, uint8_t length);
+#if !(RFM12_SMALLAPI)
 void rfm12_tx(uint8_t len, uint8_t type, uint8_t *data);
+#endif
 #else
 uint8_t rfm12_start_tx(uint8_t type, uint8_t length);
+#if !(RFM12_SMALLAPI)
 uint8_t rfm12_tx(uint8_t len, uint8_t type, uint8_t *data);
+#endif
 #endif
 
 //if polling is used, define a polling function
@@ -113,12 +117,12 @@ typedef struct
 {
 	//! Sync bytes for receiver to start filling fifo.
 	uint8_t sync[2];
-	
+
 	//! Length byte - number of bytes in buffer.
 	uint8_t len;
 
 	//! Type field for the simple airlab protocol.
-	uint8_t type;		
+	uint8_t type;
 
 	//! Checksum over the former two members.
 	uint8_t checksum;
@@ -141,21 +145,21 @@ typedef struct
 		//! Indicates if the buffer is free or completed.
 		/** \see \ref rxtx_states "States for rx and tx buffers" */
 		volatile uint8_t status;
-		
+
 		//! Length byte - number of bytes in buffer.
 		uint8_t len;
 
-		//! Type field for the simple airlab protocol.		
+		//! Type field for the simple airlab protocol.
 		uint8_t type;
-		
+
 		//! Checksum over the type and length header fields
 		uint8_t checksum;
-		
+
 		//! The actual receive buffer data
-		uint8_t buffer[RFM12_RX_BUFFER_SIZE]; 
+		uint8_t buffer[RFM12_RX_BUFFER_SIZE];
 	} rf_rx_buffer_t;
-#endif /* !(RFM12_TRANSMIT_ONLY) */	
- 
+#endif /* !(RFM12_TRANSMIT_ONLY) */
+
 
 //! Control and status structure.
 /** This data structure keeps all control and some status related variables. \n
@@ -169,40 +173,37 @@ typedef struct
 {
 	//! This controls the library internal state machine.
 	volatile uint8_t rfm12_state;
-	
+
 	//! Transmit buffer status.
 	/** \see \ref rxtx_states "States for rx and tx buffers" */
 	volatile uint8_t txstate;
-	
+
 	//! Number of bytes to transmit or receive.
 	/** This refers to the overall data size, including header data and sync bytes. */
 	uint8_t num_bytes;
-	
+
 	//! Counter for the bytes we are transmitting or receiving at the moment.
 	uint8_t bytecount;
 
 	//if receive mode is not disabled (default)
-	#if !(RFM12_TRANSMIT_ONLY)	
+	#if !(RFM12_TRANSMIT_ONLY)
 		//! Points to the receive buffer that will be filled next.
 		rf_rx_buffer_t * rf_buffer_in;
-		
-		//! Points to the receive buffer that will be returned for the next read.
-		rf_rx_buffer_t * rf_buffer_out;
-		
+
 		//! the number of the currently used in receive buffer.
 		uint8_t buffer_in_num;
-		
+
 		//! the number of the currently used out receive buffer.
 		uint8_t buffer_out_num;
 	#endif /* !(RFM12_TRANSMIT_ONLY) */
-	
+
 	//wakeup timer feature
 	#if RFM12_USE_WAKEUP_TIMER
 		//! Power management shadow register.
 		/** The wakeup timer feature needs to buffer the current power management state. */
 		uint16_t pwrmgt_shadow;
 	#endif /* RFM12_USE_WAKEUP_TIMER */
-	
+
 	#if RFM12_LOW_BATT_DETECTOR
 		//! Low battery detector status.
 		/** \see \ref batt_states "States for the low battery detection feature",
@@ -242,7 +243,7 @@ extern rfm12_control_t ctrl;
 	*/
 	static inline uint8_t rfm12_rx_status(void)
 	{
-		return ctrl.rf_buffer_out->status;
+		return rf_rx_buffers[ctrl.buffer_out_num].status;
 	}
 
 	//! Inline function to return the rx buffer length field.
@@ -251,7 +252,7 @@ extern rfm12_control_t ctrl;
 	*/
 	static inline uint8_t rfm12_rx_len(void)
 	{
-		return ctrl.rf_buffer_out->len;
+		return rf_rx_buffers[ctrl.buffer_out_num].len;
 	}
 
 	//! Inline function to return the rx buffer type field.
@@ -260,7 +261,7 @@ extern rfm12_control_t ctrl;
 	*/
 	static inline uint8_t rfm12_rx_type(void)
 	{
-		return ctrl.rf_buffer_out->type;
+		return rf_rx_buffers[ctrl.buffer_out_num].type;
 	}
 
 	//! Inline function to retreive current rf buffer contents.
@@ -269,7 +270,7 @@ extern rfm12_control_t ctrl;
 	*/
 	static inline uint8_t *rfm12_rx_buffer(void)
 	{
-		return (uint8_t*) ctrl.rf_buffer_out->buffer;
+		return (uint8_t*) rf_rx_buffers[ctrl.buffer_out_num].buffer;
 	}
 #endif /* !(RFM12_TRANSMIT_ONLY) */
 
