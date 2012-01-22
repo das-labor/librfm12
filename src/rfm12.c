@@ -509,31 +509,33 @@ rfm12_start_tx(uint8_t type, uint8_t length)
 * \returns One of these defines: \ref tx_retvals "TX return values"
 * \see rfm12_start_tx() and rfm12_tick()
 */
-#if (RFM12_NORETURNS)
-void
-#else
-uint8_t
-#endif
-rfm12_tx(uint8_t len, uint8_t type, uint8_t *data)
-{
-	#if RFM12_UART_DEBUG
-		uart_putstr ("sending packet\r\n");
-	#endif
-
-	if (len > RFM12_TX_BUFFER_SIZE) return TXRETURN(RFM12_TX_ERROR);
-
-	//exit if the buffer isn't free
-	if(ctrl.txstate != STATUS_FREE)
-		return TXRETURN(RFM12_TX_OCCUPIED);
-
-	memcpy ( rf_tx_buffer.buffer, data, len );
-
-	#if (!(RFM12_NORETURNS))
-	return rfm12_start_tx (type, len);
+#if !(RFM12_SMALLAPI)
+	#if (RFM12_NORETURNS)
+	void
 	#else
-	rfm12_start_tx (type, len);
+	uint8_t
 	#endif
-}
+	rfm12_tx(uint8_t len, uint8_t type, uint8_t *data)
+	{
+		#if RFM12_UART_DEBUG
+			uart_putstr ("sending packet\r\n");
+		#endif
+
+		if (len > RFM12_TX_BUFFER_SIZE) return TXRETURN(RFM12_TX_ERROR);
+
+		//exit if the buffer isn't free
+		if(ctrl.txstate != STATUS_FREE)
+			return TXRETURN(RFM12_TX_OCCUPIED);
+
+		memcpy ( rf_tx_buffer.buffer, data, len );
+
+		#if (!(RFM12_NORETURNS))
+		return rfm12_start_tx (type, len);
+		#else
+		rfm12_start_tx (type, len);
+		#endif
+	}
+#endif /* RFM12_SMALLAPI */
 
 
 //if receive mode is not disabled (default)
