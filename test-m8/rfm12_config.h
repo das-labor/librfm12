@@ -46,6 +46,10 @@
 */
 
 
+/************************
+ * PIN DEFINITIONS
+ */
+
 //Pin that the RFM12's slave select is connected to
 #define DDR_SS DDRB
 #define PORT_SS PORTB
@@ -63,9 +67,27 @@
 //needs to be set to output for the spi-interface to work 
 //correctly, independently of the CS pin used for the RFM12
 
-//frequency to use
-#define FREQ 433000000UL
+
+/************************
+ * RFM12 CONFIGURATION OPTIONS
+ */
+
+//baseband of the module (either RFM12_BAND_433, RFM12_BAND_868 or RFM12_BAND_912)
 #define RFM12_BASEBAND RFM12_BAND_433
+
+//center frequency to use (+- FSK frequency shift)
+#define FREQ 433175000UL
+
+//FSK frequency shift in kHz
+#define FSK_SHIFT 125000
+
+//Output power relative to maximum (0dB is maximum)
+#define RFM12_POWER           RFM12_TXCONF_POWER_0
+
+//crystal load capacitance - the frequency can be verified by measuring the
+//clock output of RFM12 and comparing to 1MHz.
+//11.5pF seems to be o.k. for RFM12, and 10.5pF for RFM12BP, but this may vary.
+#define RFM12_XTAL_LOAD RFM12_XTAL_11_5PF
 
 //use this for datarates >= 2700 Baud
 #define DATARATE_VALUE RFM12_DATARATE_CALC_HIGH(9600.0)
@@ -73,15 +95,15 @@
 //use this for 340 Baud < datarate < 2700 Baud
 //#define DATARATE_VALUE RFM12_DATARATE_CALC_LOW(1200.0)
 
-/**** TX BUFFER SIZE
- */
+
+//TX BUFFER SIZE
 #define RFM12_TX_BUFFER_SIZE 30
 
-/**** RX BUFFER SIZE
- * there are going to be 2 Buffers of this size
- * (double_buffering)
+/* size for the receiving buffer. note that there is actually TWICE the size allocated
+ * because this library implements double buffering.
  */
 #define RFM12_RX_BUFFER_SIZE 30
+
 
 /**** INTERRUPT VECTOR
  * define the interrupt vector settings here
@@ -111,11 +133,6 @@
  */
 #define RFM12_UART_DEBUG 0
 
-/*
-This is a bitmask that defines how "rude" this library behaves
-	0x01: ignore other devices when sending
-	0x04: don't use return values for transmission functions
-*/
 
 /* control rate, frequency, etc during runtime
  * this setting will certainly add a bit code

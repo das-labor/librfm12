@@ -179,7 +179,7 @@ start:
 	
 	//see what we have to do (start rx, rx or tx)
 	switch(ctrl.rfm12_state)
-	{			
+	{
 		case STATE_RX_IDLE:{
 			uint8_t data;
 					
@@ -204,7 +204,7 @@ start:
 				
 				//see whether our buffer is free
 				//FIXME: put this into global statekeeping struct, the free state can be set by the function which pulls the packet, i guess
-				if(ctrl.rf_buffer_in->status == STATUS_FREE)
+				if(rf_rx_buffers[ctrl.buffer_in_num].status == STATUS_FREE)
 				{
 					//the current receive buffer is empty, so we start receiving
 					ctrl.rfm12_state = STATE_RX_ACTIVE;
@@ -212,7 +212,7 @@ start:
 					//store the received length into the packet buffer
 					//FIXME:  why the hell do we need this?!
 					//in principle, the length is stored alongside with the buffer.. the only problem is, that the buffer might be cleared during reception
-					ctrl.rf_buffer_in->len = data;
+					rf_rx_buffers[ctrl.buffer_in_num].len = checksum;
 					
 					//end the interrupt without resetting the fifo
 					goto start;
@@ -248,7 +248,7 @@ start:
 					if(ctrl.bytecount < (RFM12_RX_BUFFER_SIZE + 3))
 					{
 						//hackhack: begin writing to struct at offsetof len
-						(& ctrl.rf_buffer_in->len)[ctrl.bytecount] = data;
+						(& rf_rx_buffers[ctrl.buffer_in_num].len)[ctrl.bytecount] = data;
 					}
 					
 					//check header against checksum
@@ -274,7 +274,7 @@ start:
 				#endif
 				
 				//indicate that the buffer is ready to be used
-				ctrl.rf_buffer_in->status = STATUS_COMPLETE;
+				rf_rx_buffers[ctrl.buffer_in_num].status = STATUS_COMPLETE;
 				#if RFM12_USE_RX_CALLBACK
 				if (rfm12_rx_callback_func != 0x0000)
 				{
@@ -282,8 +282,7 @@ start:
 				}
 				#endif
 				//switch to other buffer
-				ctrl.buffer_in_num = (ctrl.buffer_in_num + 1) % 2;
-				ctrl.rf_buffer_in = &rf_rx_buffers[ctrl.buffer_in_num];
+				ctrl.buffer_in_num ^= 1;
 				#if RFM12_USE_RX_CALLBACK
 				rfm12_rx_clear(); /* clear immediately since the data has been processed by the callback func */
 				#endif
@@ -342,7 +341,7 @@ start:
 			
 			//load a dummy byte to clear int status
 			rfm12_data_inline( (RFM12_CMD_TX>>8), 0xaa);
-			break;			
+			break;
 	}
 	
 	//set the state machine to idle
@@ -421,14 +420,14 @@ void rfm12_tick(void)
 	if(ctrl.rfm12_state != STATE_RX_IDLE)
 	{
 		return;
-	}	
+	}
 		
 	//collision detection is enabled by default
 	#if !(RFM12_NOCOLLISIONDETECTION)
 		//disable the interrupt (as we're working directly with the transceiver now)
-		//hint: we could be losing an interrupt here 
+		//hint: we could be losing an interrupt here
 		//solutions: check status flag if int is set, launch int and exit ... OR implement packet retransmission
-		RFM12_INT_OFF();	
+		RFM12_INT_OFF();
 		status = rfm12_read(RFM12_CMD_STATUS);
 		RFM12_INT_ON();
 
@@ -451,7 +450,7 @@ void rfm12_tick(void)
 		
 		//reset the channel free count for the next decrement (during the next call..)
 		channel_free_count = 1;
-	#endif	
+	#endif
 	
 	//do we have something to transmit?
 	if(ctrl.txstate == STATUS_OCCUPIED)
@@ -459,7 +458,7 @@ void rfm12_tick(void)
 		//disable the interrupt (as we're working directly with the transceiver now)
 		//hint: we could be losing an interrupt here, too
 		//we could also disturb an ongoing reception,
-		//if it just started some cpu cycles ago 
+		//if it just started some cpu cycles ago
 		//(as the check for this case is some lines (cpu cycles) above)
 		//anyhow, we MUST transmit at some point...
 		RFM12_INT_OFF();
@@ -569,31 +568,33 @@ rfm12_start_tx(uint8_t type, uint8_t length)
 * \returns One of these defines: \ref tx_retvals "TX return values"
 * \see rfm12_start_tx() and rfm12_tick()
 */
-#if (RFM12_NORETURNS)
-void
-#else
-uint8_t 
-#endif
-rfm12_tx(uint8_t len, uint8_t type, uint8_t *data)
-{
-	#if RFM12_UART_DEBUG
-		uart_putstr ("sending packet\r\n");
-	#endif
-	
-	if (len > RFM12_TX_BUFFER_SIZE) return TXRETURN(RFM12_TX_ERROR);
-
-	//exit if the buffer isn't free
-	if(ctrl.txstate != STATUS_FREE)
-		return TXRETURN(RFM12_TX_OCCUPIED);
-	
-	memcpy ( rf_tx_buffer.buffer, data, len );
-
-	#if (!(RFM12_NORETURNS))
-	return rfm12_start_tx (type, len);
+#if !(RFM12_SMALLAPI)
+	#if (RFM12_NORETURNS)
+	void
 	#else
-	rfm12_start_tx (type, len);
+	uint8_t
 	#endif
-}
+	rfm12_tx(uint8_t len, uint8_t type, uint8_t *data)
+	{
+		#if RFM12_UART_DEBUG
+			uart_putstr ("sending packet\r\n");
+		#endif
+
+		if (len > RFM12_TX_BUFFER_SIZE) return TXRETURN(RFM12_TX_ERROR);
+
+		//exit if the buffer isn't free
+		if(ctrl.txstate != STATUS_FREE)
+			return TXRETURN(RFM12_TX_OCCUPIED);
+
+		memcpy ( rf_tx_buffer.buffer, data, len );
+
+		#if (!(RFM12_NORETURNS))
+		return rfm12_start_tx (type, len);
+		#else
+		rfm12_start_tx (type, len);
+		#endif
+	}
+#endif /* RFM12_SMALLAPI */
 
 
 //if receive mode is not disabled (default)
@@ -608,12 +609,11 @@ rfm12_tx(uint8_t len, uint8_t type, uint8_t *data)
 	void __attribute__((noinline)) rfm12_rx_clear(void)
 	{
 			//mark the current buffer as empty
-			ctrl.rf_buffer_out->status = STATUS_FREE;
-			
+			rf_rx_buffers[ctrl.buffer_out_num].status = STATUS_FREE;
+
 			//switch to the other buffer
-			ctrl.buffer_out_num = (ctrl.buffer_out_num + 1 ) % 2 ;
-			ctrl.rf_buffer_out = &rf_rx_buffers[ctrl.buffer_out_num];
-		
+			ctrl.buffer_out_num ^= 1;
+
 	}
 #endif /* !(RFM12_TRANSMIT_ONLY) */
 
@@ -627,7 +627,7 @@ rfm12_tx(uint8_t len, uint8_t type, uint8_t *data)
 * - Enabling the digital data filter
 * - Enabling the use of the modules fifo, as well as enabling sync pattern detection
 * - Configuring the automatic frequency correction
-* - Setting the transmit power 
+* - Setting the transmit power
 *
 * This initialization function also sets up various library internal configuration structs and
 * puts the module into receive mode before returning.
@@ -639,7 +639,7 @@ void rfm12_init(void)
 {
 	//initialize spi
 	SS_RELEASE();
-	DDR_SS |= (1<<BIT_SS);	
+	DDR_SS |= (1<<BIT_SS);
 	spi_init();
 
 	#ifdef TX_INIT_HOOK
@@ -714,10 +714,8 @@ void rfm12_init(void)
 	//if receive mode is not disabled (default)
 	#if !(RFM12_TRANSMIT_ONLY)
 		//init buffer pointers
-		ctrl.rf_buffer_out = &rf_rx_buffers[0];
-		ctrl.rf_buffer_in  = &rf_rx_buffers[0];
-		//ctrl.buffer_in_num = 0;
-		//ctrl.buffer_out_num = 0;
+		ctrl.buffer_in_num = 0;
+		ctrl.buffer_out_num = 0;
 	#endif /* !(RFM12_TRANSMIT_ONLY) */
 	
 	//low battery detector feature initialization
