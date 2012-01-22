@@ -36,14 +36,25 @@
 #ifndef _RFM12_CTRL_H
 #define _RFM12_CTRL_H
 
+
 /************************
 * function protoypes	
 */
- 
 #if RFM12_LIVECTRL
+#ifndef RFM12_NUM_DELAYED_COMMANDS
+	#define RFM12_NUM_DELAYED_COMMANDS 4 /* defines how many commands to store for delayed execution */
+#endif
 //see rfm12_ctrl.c for more documentation
 void rfm12_set_rate (uint16_t in_datarate);
 void rfm12_set_frequency (uint16_t in_freq);
+void rfm12_set_rssi (uint8_t in_val);
+void rfm12_set_frequency_khz (uint16_t in_freq);
+uint16_t rfm12_sendcommand (uint16_t cmd, uint16_t in_payload);
+void rfm12_set_control_register (rfm12_control_t *);
+/* called at the end of the interrupt/polling function in order to not interfere with
+ * other transactions.
+ */
+void rfm12_data_delayed (uint8_t in_op, uint16_t in_cmd);
 #endif /* RFM12_LIVECTRL */
 
 #endif /* _RFM12_EXTRA_H */

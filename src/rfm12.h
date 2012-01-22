@@ -40,6 +40,7 @@
 #ifndef _RFM12_H
 #define _RFM12_H
 
+
 /** \name States for rx and tx buffers
 * \anchor rxtx_states
 * \see rfm12_rx_status() and rfm12_control_t
@@ -76,6 +77,11 @@
 void rfm12_init(void);
 void rfm12_tick(void);
 
+
+#if RFM12_USE_RX_CALLBACK
+/* set the callback function pointer */
+void rfm12_set_callback ((*in_func)(uint8_t, uint8_t *));
+#endif
 //if receive mode is not disabled (default)
 #if !(RFM12_TRANSMIT_ONLY)
 	void rfm12_rx_clear(void);
@@ -197,7 +203,7 @@ typedef struct
 	#endif /* !(RFM12_TRANSMIT_ONLY) */
 	
 	//wakeup timer feature
-	#if RFM12_USE_WAKEUP_TIMER
+	#if (RFM12_USE_WAKEUP_TIMER || RFM12_LIVECTRL)
 		//! Power management shadow register.
 		/** The wakeup timer feature needs to buffer the current power management state. */
 		uint16_t pwrmgt_shadow;
@@ -210,6 +216,11 @@ typedef struct
 		*/
 		uint8_t low_batt;
 	#endif /* RFM12_LOW_BATT_DETECTOR */
+	#if RFM12_LIVECTRL
+		uint16_t rxctrl_shadow;
+		uint16_t afc_shadow;
+		uint16_t txconf_shadow;
+	#endif
 } rfm12_control_t;
 
 
