@@ -187,9 +187,6 @@ typedef struct
 
 	//if receive mode is not disabled (default)
 	#if !(RFM12_TRANSMIT_ONLY)
-		//! Points to the receive buffer that will be filled next.
-		rf_rx_buffer_t * rf_buffer_in;
-
 		//! the number of the currently used in receive buffer.
 		uint8_t buffer_in_num;
 

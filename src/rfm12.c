@@ -192,7 +192,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 
 				//see whether our buffer is free
 				//FIXME: put this into global statekeeping struct, the free state can be set by the function which pulls the packet, i guess
-				if(ctrl.rf_buffer_in->status == STATUS_FREE)
+				if(rf_rx_buffers[ctrl.buffer_in_num].status == STATUS_FREE)
 				{
 					//the current receive buffer is empty, so we start receiving
 					ctrl.rfm12_state = STATE_RX_ACTIVE;
@@ -200,7 +200,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 					//store the received length into the packet buffer
 					//FIXME:  why the hell do we need this?!
 					//in principle, the length is stored alongside with the buffer.. the only problem is, that the buffer might be cleared during reception
-					ctrl.rf_buffer_in->len = checksum;
+					rf_rx_buffers[ctrl.buffer_in_num].len = checksum;
 
 					//end the interrupt without resetting the fifo
 					goto END;
@@ -235,7 +235,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 					if(ctrl.bytecount < (RFM12_RX_BUFFER_SIZE + 3))
 					{
 						//hackhack: begin writing to struct at offsetof len
-						(& ctrl.rf_buffer_in->len)[ctrl.bytecount] = data;
+						(& rf_rx_buffers[ctrl.buffer_in_num].len)[ctrl.bytecount] = data;
 					}
 
 					//check header against checksum
@@ -261,11 +261,10 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 				#endif
 
 				//indicate that the buffer is ready to be used
-				ctrl.rf_buffer_in->status = STATUS_COMPLETE;
+				rf_rx_buffers[ctrl.buffer_in_num].status = STATUS_COMPLETE;
 
 				//switch to other buffer
-				ctrl.buffer_in_num = (ctrl.buffer_in_num + 1) % 2;
-				ctrl.rf_buffer_in = &rf_rx_buffers[ctrl.buffer_in_num];
+				ctrl.buffer_in_num ^= 1;
 			#endif /* !(RFM12_TRANSMIT_ONLY) */
 			break;
 
@@ -633,10 +632,8 @@ void rfm12_init(void)
 
 	//if receive mode is not disabled (default)
 	#if !(RFM12_TRANSMIT_ONLY)
-		//init buffer pointers
-		ctrl.rf_buffer_in  = &rf_rx_buffers[0];
 		ctrl.buffer_in_num = 0;
-		//ctrl.buffer_out_num = 0;
+		ctrl.buffer_out_num = 0;
 	#endif /* !(RFM12_TRANSMIT_ONLY) */
 
 	//low battery detector feature initialization
