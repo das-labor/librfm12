@@ -24,8 +24,8 @@
  * \author Hans-Gert Dahmen
  * \author Peter Fuhrmann
  * \author Soeren Heisrath
- * \version 0.9.0
- * \date 08.09.09
+ * \version 1.2
+ * \date 2012/01/22
  *
  * All core functionality is implemented within this file.
  */
@@ -139,6 +139,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 		static uint8_t checksum; //static local variables produce smaller code size than globals
 	#endif /* !(RFM12_TRANSMIT_ONLY) */
 
+start:
 	//first we read the first byte of the status register
 	//to get the interrupt flags
 	status = rfm12_read_int_flags_inline();
@@ -179,7 +180,9 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 	//see what we have to do (start rx, rx or tx)
 	switch(ctrl.rfm12_state)
 	{			
-		case STATE_RX_IDLE:
+		case STATE_RX_IDLE:{
+			uint8_t data;
+					
 			//if receive mode is not disabled (default)
 			#if !(RFM12_TRANSMIT_ONLY)
 				//init the bytecounter - remember, we will read the length byte, so this must be 1
@@ -187,15 +190,16 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 
 				//read the length byte,  and write it to the checksum
 				//remember, the first byte is the length byte			
-				checksum = rfm12_read_fifo_inline();
+				data = rfm12_read_fifo_inline();
+				checksum = data;
 				
 				//add the packet overhead and store it into a working variable
-				ctrl.num_bytes = checksum + PACKET_OVERHEAD;
+				ctrl.num_bytes = data + PACKET_OVERHEAD;
 				
 				//debug
 				#if RFM12_UART_DEBUG >= 2
 					uart_putc('I');
-					uart_putc(checksum);
+					uart_putc(data);
 				#endif
 				
 				//see whether our buffer is free
@@ -208,15 +212,16 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 					//store the received length into the packet buffer
 					//FIXME:  why the hell do we need this?!
 					//in principle, the length is stored alongside with the buffer.. the only problem is, that the buffer might be cleared during reception
-					ctrl.rf_buffer_in->len = checksum;
+					ctrl.rf_buffer_in->len = data;
 					
 					//end the interrupt without resetting the fifo
-					goto END;
+					goto start;
 				}
 			
 				/* if we're here, the buffer is full, so we ignore this transmission by resetting the fifo (at the end of the function)  */
 			#endif /* !(RFM12_TRANSMIT_ONLY) */
-			break;
+			
+			}break;
 			
 		case STATE_RX_ACTIVE:
 			//if receive mode is not disabled (default)
@@ -257,7 +262,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 					ctrl.bytecount++;
 					
 					//end the interrupt without resetting the fifo
-					goto END;
+					goto start;
 				}
 				
 				/* if we're here, receiving is done */
@@ -297,9 +302,12 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 				rfm12_data_inline( (RFM12_CMD_TX>>8), rf_tx_buffer.sync[ctrl.bytecount++]);
 							
 				//end the interrupt without resetting the fifo
-				goto END;
+				goto start;
 			}
 			
+			#ifdef TX_LEAVE_HOOK
+				TX_LEAVE_HOOK;
+			#endif
 			/* if we're here, we're finished transmitting the bytes */
 			/* the fifo will be reset at the end of the function */
 			
@@ -351,6 +359,8 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 	rfm12_data_delayed (1, 0);
 	#endif
 		
+	goto start; //check the interrupt condition again, and only exit when there is none.
+
 	END:
 	//turn the int back on
 	RFM12_INT_ON();
@@ -463,6 +473,10 @@ void rfm12_tick(void)
 		rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT);
 		#endif
 		
+		#ifdef RX_LEAVE_HOOK
+			RX_LEAVE_HOOK;
+		#endif
+		
 		//calculate number of bytes to be sent by ISR
 		//2 sync bytes + len byte + type byte + checksum + message length + 1 dummy byte
 		ctrl.num_bytes = rf_tx_buffer.len + 6;
@@ -472,6 +486,10 @@ void rfm12_tick(void)
 		
 		//set mode for interrupt handler
 		ctrl.rfm12_state = STATE_TX;
+
+		#ifdef TX_ENTER_HOOK
+			TX_ENTER_HOOK;
+		#endif
 		
 		//wakeup timer feature
 		#if (RFM12_USE_WAKEUP_TIMER) && !(RFM12_LIVECTRL)
@@ -624,9 +642,18 @@ void rfm12_init(void)
 	DDR_SS |= (1<<BIT_SS);	
 	spi_init();
 
+	#ifdef TX_INIT_HOOK
+		TX_INIT_HOOK;
+	#endif
+	
+	#ifdef RX_INIT_HOOK
+		RX_INIT_HOOK;
+	#endif
+	
+
 	//enable internal data register and fifo
 	//setup selected band
-	rfm12_data(RFM12_CMD_CFG | RFM12_CFG_EL | RFM12_CFG_EF | RFM12_BASEBAND | RFM12_XTAL_12PF);
+	rfm12_data(RFM12_CMD_CFG | RFM12_CFG_EL | RFM12_CFG_EF | RFM12_BASEBAND | RFM12_XTAL_LOAD);
 	
 	//set power default state (usually disable clock output)
 	//do not write the power register two times in a short time
@@ -667,9 +694,9 @@ void rfm12_init(void)
 	#endif
 	
 	//set TX Power to -0dB, frequency shift = +-125kHz
-	rfm12_data(RFM12_CMD_TXCONF | RFM12_TXCONF_POWER_0 | RFM12_TXCONF_FS_CALC(125000) );
+	rfm12_data(RFM12_CMD_TXCONF | RFM12_POWER | RFM12_TXCONF_FS_CALC(FSK_SHIFT) );
 	#if RFM12_LIVECTRL
-	ctrl.txconf_shadow = (RFM12_CMD_TXCONF | RFM12_TXCONF_POWER_0 | RFM12_TXCONF_FS_CALC(125000) );
+	ctrl.txconf_shadow = (RFM12_CMD_TXCONF | RFM12_POWER | RFM12_TXCONF_FS_CALC(FSK_SHIFT) );
 	#endif
 	
 	//disable low dutycycle mode
@@ -709,6 +736,13 @@ void rfm12_init(void)
 		ctrl.pwrmgt_shadow = (RFM12_CMD_PWRMGT | PWRMGT_RECEIVE);
 	#endif /* RFM12_USE_WAKEUP_TIMER */
 	
+	#ifdef RX_ENTER_HOOK
+		RX_ENTER_HOOK;
+	#endif
+	
+	rfm12_data(RFM12_CMD_LBDMCD); //set low battery detect 2.2V, clock output 1MHZ
+
+	
 	//ASK receive mode feature initialization
 	#if RFM12_RECEIVE_ASK
 		adc_init();
@@ -719,7 +753,7 @@ void rfm12_init(void)
 	
 	//clear int flag
 	rfm12_read(RFM12_CMD_STATUS);
-	RFM12_INT_FLAG |= (1<<RFM12_FLAG_BIT);		
+	RFM12_INT_FLAG = (1<<RFM12_FLAG_BIT);
 	
 	//init receiver fifo, we now begin receiving.
 	rfm12_data(CLEAR_FIFO);
@@ -732,4 +766,3 @@ void rfm12_init(void)
 	rfm12_set_control_register (&ctrl);
 	#endif
 }
-

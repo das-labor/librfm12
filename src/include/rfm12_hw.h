@@ -37,7 +37,25 @@
 #	define RFM12_BAND_433 0x10
 #	define RFM12_BAND_868 0x20
 #	define RFM12_BAND_915 0x30
-#	define RFM12_XTAL_12PF 0x07
+
+
+#	define RFM12_XTAL_8_5PF  0x00
+#	define RFM12_XTAL_9_0PF  0x01
+#	define RFM12_XTAL_9_5PF  0x02
+#	define RFM12_XTAL_10_0PF 0x03
+#	define RFM12_XTAL_10_5PF 0x04
+#	define RFM12_XTAL_11_0PF 0x05
+#	define RFM12_XTAL_11_5PF 0x06
+#	define RFM12_XTAL_12_0PF 0x07
+#	define RFM12_XTAL_12_5PF 0x08
+#	define RFM12_XTAL_13_0PF 0x09
+#	define RFM12_XTAL_13_5PF 0x0A
+#	define RFM12_XTAL_14_0PF 0x0B
+#	define RFM12_XTAL_14_5PF 0x0C
+#	define RFM12_XTAL_15_0PF 0x0D
+#	define RFM12_XTAL_15_5PF 0x0E
+#	define RFM12_XTAL_16_0PF 0x0F
+
 
 /*
 	2. Power Management Command

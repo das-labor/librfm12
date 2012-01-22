@@ -78,6 +78,14 @@
 //center frequency to use (+-125kHz FSK frequency shift)
 #define FREQ 433175000UL
 
+//Output power relative to maximum (0dB is maximum)
+#define RFM12_POWER           RFM12_TXCONF_POWER_0
+
+//crystal load capacitance - the frequency can be verified by measuring the
+//clock output of RFM12 and comparing to 1MHz.
+//11.5pF seems to be o.k. for RFM12, and 10.5pF for RFM12BP, but this may vary.
+#define RFM12_XTAL_LOAD RFM12_XTAL_11_5PF
+
 //use this for datarates >= 2700 Baud
 #define DATARATE_VALUE RFM12_DATARATE_CALC_HIGH(9600.0)
 
@@ -139,6 +147,24 @@
  */
 #define RFM12_USE_RX_CALLBACK 0
 
+
+/************************
+ * RFM12BP support (high power version of RFM12)
+ */
+
+//To use RFM12BP, which needs control signals for RX enable and TX enable,
+//use these defines (set to your pinout of course).
+//The TX-Part can also be used to control a TX-LED with the nomral RFM12
+
+/*
+	#define RX_INIT_HOOK  DDRD |= _BV(PD5)
+	#define RX_LEAVE_HOOK PORTD &= ~_BV(PD5)
+	#define RX_ENTER_HOOK PORTD |= _BV(PD5)
+	
+	#define TX_INIT_HOOK  DDRD |= _BV(PD4)
+	#define TX_LEAVE_HOOK PORTD &= ~_BV(PD4)
+	#define TX_ENTER_HOOK PORTD |= _BV(PD4)
+*/
 
 /************************
  * UART DEBUGGING

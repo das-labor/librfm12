@@ -1,3 +1,17 @@
+
+------------------------------------------------------------------------
+
+2012-01-22
+
+* interrupt deadlock bug fixed: if interrupt handler was executing while
+  the interrupt condition occurred, the interrupt line stayed low, and interrupt
+  was never entered again (edge triggered). This is now fixed by looping in
+  the interrupt handler until no interrupt conditions are present.
+* Support form RFM12BP added. Tested working.
+* more RFM12 parameters adjustable in config file
+ 
+------------------------------------------------------------------------
+
 2010-07-11 13:37:00 +0100 (Sun, 11 Jul 2010)
 * branch in 1.2-dev
 * implemented callback function for receiving
