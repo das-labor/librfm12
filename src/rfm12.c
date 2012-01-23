@@ -722,8 +722,9 @@ void rfm12_init(void)
 		RX_ENTER_HOOK;
 	#endif
 	
-	rfm12_data(RFM12_CMD_LBDMCD); //set low battery detect 2.2V, clock output 1MHZ
-
+	#if RFM12_USE_CLOCK_OUTPUT || RFM12_LOW_BATT_DETECTOR
+		rfm12_data(RFM12_CMD_LBDMCD | RFM12_LBD_VOLTAGE | RFM12_CLOCK_OUT_FREQUENCY ); //set low battery detect, clock output
+	#endif
 	
 	//ASK receive mode feature initialization
 	#if RFM12_RECEIVE_ASK

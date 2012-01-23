@@ -141,6 +141,13 @@
 #define RFM12_TRANSMIT_ASK 0
 #define RFM12_USE_WAKEUP_TIMER 1
 #define RFM12_LOW_POWER 0
+#define RFM12_USE_CLOCK_OUTPUT 1
+
+
+#define RFM12_LBD_VOLTAGE             RFM12_LBD_VOLTAGE_3V0
+
+
+#define RFM12_CLOCK_OUT_FREQUENCY     RFM12_CLOCK_OUT_FREQUENCY_1_00_MHz
 
 /* use a callback function that is called directly from the
  * interrupt routine whenever there is a data packet available. When

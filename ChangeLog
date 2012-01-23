@@ -1,5 +1,16 @@
 ------------------------------------------------------------------------
 
+2012-01-23
+
+* use of PWRMGT_DEFAULT makro in rfm12_config.h deprecated. wakeup timer and
+  low battery detector handle this automatic.
+* RFM12_USE_CLOCK_OUTPUT makro added for config file. this turns on the clock output
+* RFM12_CLOCK_OUT_FREQUENCY makro to configure clock output
+* RFM12_LBD_VOLTAGE makro and constants for configuring LBD voltage
+* Support for RFM12BP fixed.
+
+------------------------------------------------------------------------
+
 2012-01-22
 
 Merged changes from Hansinators 1.1 Version

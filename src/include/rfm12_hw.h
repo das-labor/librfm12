@@ -493,6 +493,34 @@
 */
 #define RFM12_CMD_LBDMCD 0xC000
 
+#define RFM12_LBD_VOLTAGE_2V2 0
+#define RFM12_LBD_VOLTAGE_2V3 1
+#define RFM12_LBD_VOLTAGE_2V4 2
+#define RFM12_LBD_VOLTAGE_2V5 3
+#define RFM12_LBD_VOLTAGE_2V6 4
+#define RFM12_LBD_VOLTAGE_2V7 5
+#define RFM12_LBD_VOLTAGE_2V8 6
+#define RFM12_LBD_VOLTAGE_2V9 7
+#define RFM12_LBD_VOLTAGE_3V0 8
+#define RFM12_LBD_VOLTAGE_3V1 9
+#define RFM12_LBD_VOLTAGE_3V2 10
+#define RFM12_LBD_VOLTAGE_3V3 11
+#define RFM12_LBD_VOLTAGE_3V4 12
+#define RFM12_LBD_VOLTAGE_3V5 13
+#define RFM12_LBD_VOLTAGE_3V6 14
+#define RFM12_LBD_VOLTAGE_3V7 15
+
+#define RFM12_CLOCK_OUT_FREQUENCY_1_00_MHz  (0<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_1_25_MHz  (1<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_1_66_MHz  (2<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_2_00_MHz  (3<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_2_50_MHz  (4<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_3_33_MHz  (5<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_5_00_MHz  (6<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_10_00_MHz (7<<5)
+
+
+
 /*
 	17. Status Read Command
 	The read command starts with a zero, whereas all other control commands start with a one. If a read command is identified, the
