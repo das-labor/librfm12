@@ -146,45 +146,46 @@ start:
 
 	//low battery detector feature
 	#if RFM12_LOW_BATT_DETECTOR
-	if(status & (RFM12_STATUS_LBD>>8))
-	{
-		//debug
-		#if RFM12_UART_DEBUG >= 2
-			uart_putc('L');
-		#endif
-		
-		//set status variable to low battery
-		ctrl.low_batt = RFM12_BATT_LOW;
-	}
+		if(status & (RFM12_STATUS_LBD>>8))
+		{
+			//debug
+			#if RFM12_UART_DEBUG >= 2
+				uart_putc('L');
+			#endif
+			
+			//set status variable to low battery
+			ctrl.low_batt = RFM12_BATT_LOW;
+		}
 	#endif /* RFM12_LOW_BATT_DETECTOR */	
 	
 	//wakeup timer feature
 	#if RFM12_USE_WAKEUP_TIMER
-	if(status & (RFM12_STATUS_WKUP>>8))
-	{
-		//debug
-		#if RFM12_UART_DEBUG >= 2
-			uart_putc('W');
-		#endif
-		
-		//restart the wakeup timer by toggling the bit on and off
-		rfm12_data(ctrl.pwrmgt_shadow & ~RFM12_PWRMGT_EW);
-		rfm12_data(ctrl.pwrmgt_shadow);
-	}
+		if(status & (RFM12_STATUS_WKUP>>8))
+		{
+			//debug
+			#if RFM12_UART_DEBUG >= 2
+				uart_putc('W');
+			#endif
+			
+			//restart the wakeup timer by toggling the bit on and off
+			rfm12_data(ctrl.pwrmgt_shadow & ~RFM12_PWRMGT_EW);
+			rfm12_data(ctrl.pwrmgt_shadow);
+		}
 	#endif /* RFM12_USE_WAKEUP_TIMER */
 	
 	//check if the fifo interrupt occurred
 	if(!(status & (RFM12_STATUS_FFIT>>8)))
-		goto END;
+		goto END;//no
+	//yes
 	
 	//see what we have to do (start rx, rx or tx)
 	switch(ctrl.rfm12_state)
 	{
 		case STATE_RX_IDLE:{
-			uint8_t data;
-					
 			//if receive mode is not disabled (default)
 			#if !(RFM12_TRANSMIT_ONLY)
+				uint8_t data;
+			
 				//init the bytecounter - remember, we will read the length byte, so this must be 1
 				ctrl.bytecount = 1;
 
@@ -210,9 +211,9 @@ start:
 					ctrl.rfm12_state = STATE_RX_ACTIVE;
 				
 					//store the received length into the packet buffer
-					//FIXME:  why the hell do we need this?!
-					//in principle, the length is stored alongside with the buffer.. the only problem is, that the buffer might be cleared during reception
-					rf_rx_buffers[ctrl.buffer_in_num].len = checksum;
+					//this length field will be used by application reading the
+					//buffer.
+					rf_rx_buffers[ctrl.buffer_in_num].len = data;
 					
 					//end the interrupt without resetting the fifo
 					goto start;
@@ -275,16 +276,19 @@ start:
 				
 				//indicate that the buffer is ready to be used
 				rf_rx_buffers[ctrl.buffer_in_num].status = STATUS_COMPLETE;
+				
 				#if RFM12_USE_RX_CALLBACK
-				if (rfm12_rx_callback_func != 0x0000)
-				{
-					rfm12_rx_callback_func (ctrl.rf_buffer_in->len, ctrl.rf_buffer_in.buffer);
-				}
+					if (rfm12_rx_callback_func != 0x0000)
+					{
+						rfm12_rx_callback_func (ctrl.rf_buffer_in->len, ctrl.rf_buffer_in.buffer);
+					}
 				#endif
+				
 				//switch to other buffer
 				ctrl.buffer_in_num ^= 1;
+				
 				#if RFM12_USE_RX_CALLBACK
-				rfm12_rx_clear(); /* clear immediately since the data has been processed by the callback func */
+					rfm12_rx_clear(); /* clear immediately since the data has been processed by the callback func */
 				#endif
 			#endif /* !(RFM12_TRANSMIT_ONLY) */
 			break;
@@ -303,42 +307,29 @@ start:
 				//end the interrupt without resetting the fifo
 				goto start;
 			}
-			
+
+			/* if we're here, we're finished transmitting the bytes */
+			/* the fifo will be reset at the end of the function */
+
+			//Transmitter on RFM12BP off			
 			#ifdef TX_LEAVE_HOOK
 				TX_LEAVE_HOOK;
 			#endif
-			/* if we're here, we're finished transmitting the bytes */
-			/* the fifo will be reset at the end of the function */
 			
 			//flag the buffer as free again
 			ctrl.txstate = STATUS_FREE;
 			
-			//wakeup timer feature
-			#if RFM12_USE_WAKEUP_TIMER && !(RFM12_LIVECTRL)
-				//clear wakeup timer once
-				rfm12_data(ctrl.pwrmgt_shadow & ~RFM12_PWRMGT_EW);
-				//set shadow register to default receive state
-				//the define correctly handles the transmit only mode
-				ctrl.pwrmgt_shadow &= ~(RFM12_PWRMGT_ET); /* disable transmitter */
-				ctrl.pwrmgt_shadow |= (RFM12_CMD_PWRMGT | PWRMGT_RECEIVE);
-			#elif (RFM12_LIVECTRL) && RFM12_USE_WAKEUP_TIMER
-				ctrl.pwrmgt_shadow &= ~(RFM12_PWRMGT_EW);
-				rfm12_data (ctrl.pwrmgt_shadow);
-			#endif /* RFM12_USE_WAKEUP_TIMER */
-				
 			//turn off the transmitter and enable receiver
-			//the receiver is not enabled in transmit only mode
-			//if the wakeup timer is used, this will re-enable the wakeup timer bit
-			//the magic is done via defines
-			#if RFM12_LIVECTRL && !(RFM12_USE_WAKEUP_TIMER)
-				ctrl.pwrmgt_shadow &= ~(PWRMGT_ET); /* disable transmitter */
-				ctrl.pwrmgt_shadow |= RFM12_CMD_PWRMGT | RFM12_PWRMGT_ER; /* enable receiver */
-				rfm12_data (ctrl.pwrmgt_shadow);
-			#else
-				/* added "| PWRMGT_DEFAULT" - was this missing by mistake or on purpose? - soeren */
-				rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_RECEIVE | PWRMGT_DEFAULT); 
-			#endif
+			//the receiver is not enabled in transmit only mode (by PWRMGT_RECEIVE makro)			
+			#if RFM12_PWRMGT_SHADOW
+				ctrl.pwrmgt_shadow &= ~(RFM12_PWRMGT_ET); /* disable transmitter */
+				ctrl.pwrmgt_shadow |= (PWRMGT_RECEIVE);   /* activate predefined receive mode */
+				rfm12_data(ctrl.pwrmgt_shadow);
+			#else /* no RFM12_PWRMGT_SHADOW */
+				rfm12_data( PWRMGT_RECEIVE );			
+			#endif /* RFM12_PWRMGT_SHADOW */
 			
+			//Receiver on RFM12BP on
 			#ifdef RX_ENTER_HOOK
 				RX_ENTER_HOOK;
 			#endif
@@ -356,12 +347,7 @@ start:
 		rfm12_data_inline(RFM12_CMD_FIFORESET>>8, CLEAR_FIFO_INLINE);
 		rfm12_data_inline(RFM12_CMD_FIFORESET>>8, ACCEPT_DATA_INLINE);
 	#endif /* !(RFM12_TRANSMIT_ONLY) */
-	
-	#if RFM12_LIVECTRL
-	/* execute delayed commands */
-	rfm12_data_delayed (1, 0);
-	#endif
-		
+
 	goto start; //check the interrupt condition again, and only exit when there is none.
 
 	END:
@@ -429,8 +415,7 @@ void rfm12_tick(void)
 	//collision detection is enabled by default
 	#if !(RFM12_NOCOLLISIONDETECTION)
 		//disable the interrupt (as we're working directly with the transceiver now)
-		//hint: we could be losing an interrupt here
-		//solutions: check status flag if int is set, launch int and exit ... OR implement packet retransmission
+		//we won't loose interrupts, as the AVR caches them in the int flag
 		RFM12_INT_OFF();
 		status = rfm12_read(RFM12_CMD_STATUS);
 		RFM12_INT_ON();
@@ -442,40 +427,40 @@ void rfm12_tick(void)
 			channel_free_count = CHANNEL_FREE_TIME;
 			return;
 		}
-		
-		//no: decrement counter
-		channel_free_count--;
+		//no
 		
 		//is the channel free long enough ?
 		if(channel_free_count != 0)
 		{
+			//no:
+			channel_free_count--; // decrement counter
 			return;
 		}
-		
-		//reset the channel free count for the next decrement (during the next call..)
-		channel_free_count = 1;
+		//yes: we can begin transmitting
 	#endif
 	
 	//do we have something to transmit?
 	if(ctrl.txstate == STATUS_OCCUPIED)
 	{ //yes: start transmitting
 		//disable the interrupt (as we're working directly with the transceiver now)
-		//hint: we could be losing an interrupt here, too
-		//we could also disturb an ongoing reception,
-		//if it just started some cpu cycles ago
+		//we won't loose interrupts, as the AVR caches them in the int flag.
+		//we could disturb an ongoing reception,
+		//if it has just started some cpu cycles ago
 		//(as the check for this case is some lines (cpu cycles) above)
 		//anyhow, we MUST transmit at some point...
 		RFM12_INT_OFF();
 		
 		//disable receiver - if you don't do this, tx packets will get lost
 		//as the fifo seems to be in use by the receiver
-		#if RFM12_LIVECTRL || RFM12_USE_WAKEUP_TIMER
-		ctrl.pwrmgt_shadow &= ~(RFM12_PWRMGT_ER);
-		rfm12_data(ctrl.pwrmgt_shadow);
-		#else
-		rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT);
-		#endif
 		
+		#if RFM12_PWRMGT_SHADOW
+			ctrl.pwrmgt_shadow &= ~(RFM12_PWRMGT_ER); /* disable receiver */
+			rfm12_data(ctrl.pwrmgt_shadow);
+		#else
+			rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT ); /* disable receiver */
+		#endif
+
+		//RFM12BP receiver off		
 		#ifdef RX_LEAVE_HOOK
 			RX_LEAVE_HOOK;
 		#endif
@@ -490,15 +475,11 @@ void rfm12_tick(void)
 		//set mode for interrupt handler
 		ctrl.rfm12_state = STATE_TX;
 
+		//RFM12BP transmitter on		
 		#ifdef TX_ENTER_HOOK
 			TX_ENTER_HOOK;
 		#endif
-		
-		//wakeup timer feature
-		#if (RFM12_USE_WAKEUP_TIMER) && !(RFM12_LIVECTRL)
-			ctrl.pwrmgt_shadow |= PWRMGT_DEFAULT;
-		#endif /* RFM12_USE_WAKEUP_TIMER */
-		
+				
 		//fill 2byte 0xAA preamble into data register
 		//the preamble helps the receivers AFC circuit to lock onto the exact frequency
 		//(hint: the tx FIFO [if el is enabled] is two staged, so we can safely write 2 bytes before starting)
@@ -506,11 +487,11 @@ void rfm12_tick(void)
 		rfm12_data(RFM12_CMD_TX | PREAMBLE);
 		
 		//set ET in power register to enable transmission (hint: TX starts now)
-		#if RFM12_LIVECTRL || RFM12_USE_WAKEUP_TIMER
-		ctrl.pwrmgt_shadow |= RFM12_PWRMGT_ET;
-		rfm12_data (ctrl.pwrmgt_shadow);
+		#if RFM12_PWRMGT_SHADOW
+			ctrl.pwrmgt_shadow |= RFM12_PWRMGT_ET;
+			rfm12_data (ctrl.pwrmgt_shadow);
 		#else
-		rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT | RFM12_PWRMGT_ET);
+			rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT | RFM12_PWRMGT_ET);
 		#endif
 
 		//enable the interrupt to continue the transmission
@@ -731,12 +712,11 @@ void rfm12_init(void)
 	//the magic is done via defines
 	rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_RECEIVE);
 	
-	//wakeup timer feature setup
-	#if RFM12_USE_WAKEUP_TIMER
+	#if RFM12_PWRMGT_SHADOW
 		//set power management shadow register to receiver chain enabled or disabled
 		//the define correctly handles the transmit only mode
 		ctrl.pwrmgt_shadow = (RFM12_CMD_PWRMGT | PWRMGT_RECEIVE);
-	#endif /* RFM12_USE_WAKEUP_TIMER */
+	#endif
 	
 	#ifdef RX_ENTER_HOOK
 		RX_ENTER_HOOK;

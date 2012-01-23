@@ -139,7 +139,7 @@
 #define RFM12_USE_POLLING 0
 #define RFM12_RECEIVE_ASK 0
 #define RFM12_TRANSMIT_ASK 0
-#define RFM12_USE_WAKEUP_TIMER 0
+#define RFM12_USE_WAKEUP_TIMER 1
 #define RFM12_LOW_POWER 0
 
 /* use a callback function that is called directly from the

@@ -200,12 +200,11 @@ typedef struct
 		uint8_t buffer_out_num;
 	#endif /* !(RFM12_TRANSMIT_ONLY) */
 
-	//wakeup timer feature
-	#if (RFM12_USE_WAKEUP_TIMER || RFM12_LIVECTRL)
+	#if RFM12_PWRMGT_SHADOW
 		//! Power management shadow register.
 		/** The wakeup timer feature needs to buffer the current power management state. */
 		uint16_t pwrmgt_shadow;
-	#endif /* RFM12_USE_WAKEUP_TIMER */
+	#endif
 
 	#if RFM12_LOW_BATT_DETECTOR
 		//! Low battery detector status.

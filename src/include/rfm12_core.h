@@ -45,7 +45,15 @@
 /************************
 * LIBRARY DEFAULT SETTINGS	
  */
- 
+
+
+#ifdef PWRMGT_DEFAULT
+	#warning "You are using the PWRMGT_DEFAULT makro directly in your rfm12_config.h - this is no longer supported."
+	#warning "RFM12_USE_WAKEUP_TIMER and RFM12_LOW_BATT_DETECTOR care about this on their own now. just remove PWRMGT_DEFAULT if you needed it for that."
+	#warning "if you need the clock output, use the new RFM12_USE_CLOCK_OUTPUT instead!"
+	#undef PWRMGT_DEFAULT
+#endif
+
 //if notreturns is not defined, we won't use this feature
 #ifndef RFM12_NORETURNS
 	#define RFM12_NORETURNS 0
@@ -78,6 +86,18 @@
 //if low battery detector is not defined, we won't use this feature
 #ifndef RFM12_LOW_BATT_DETECTOR
 	#define RFM12_LOW_BATT_DETECTOR 0
+#endif
+
+#ifndef RFM12_USE_CLOCK_OUTPUT
+	#define RFM12_USE_CLOCK_OUTPUT 0
+#endif
+
+#if RFM12_USE_CLOCK_OUTPUT
+	//Enable Xtal oscillator
+	#define PWRMGMT_CLCKOUT (RFM12_PWRMGT_EX)
+#else
+	//Disable Clock output
+	#define PWRMGMT_CLCKOUT (RFM12_PWRMGT_DC)
 #endif
 
 //if the low battery detector feature is used, we will set some extra pwrmgmt options
@@ -115,6 +135,9 @@
 			#warning "You are using the RFM12 wakeup timer, but PWRMGT_DEFAULT has the wakeup timer bit unset."
 		#endif
 	#endif
+	
+	//enable powermanagement shadowing
+	#define RFM12_PWRMGT_SHADOW 1
 #else
 	#define PWRMGMT_WKUP 0
 #endif /* RFM12_USE_WAKEUP_TIMER */
@@ -138,10 +161,14 @@
 #ifndef RFM12_UART_DEBUG
 	#define RFM12_UART_DEBUG 0
 #endif
+
+#ifndef RFM12_PWRMGT_SHADOW
+	#define RFM12_PWRMGT_SHADOW 0
+#endif
  
 //default value for powermanagement register
 #ifndef PWRMGT_DEFAULT
-	#define PWRMGT_DEFAULT (RFM12_PWRMGT_DC | PWRMGMT_WKUP | PWRMGMT_LOW_BATT)
+	#define PWRMGT_DEFAULT (PWRMGMT_CLCKOUT | PWRMGMT_WKUP | PWRMGMT_LOW_BATT)
 #endif
 
 //define a default receive power management mode
