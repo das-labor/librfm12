@@ -75,8 +75,12 @@
 //baseband of the module (either RFM12_BAND_433, RFM12_BAND_868 or RFM12_BAND_912)
 #define RFM12_BASEBAND RFM12_BAND_433
 
-//center frequency to use (+-125kHz FSK frequency shift)
+//center frequency to use (+- FSK frequency shift)
 #define FREQ 433175000UL
+
+//FSK frequency shift in kHz
+#define FSK_SHIFT 125000
+
 
 //Output power relative to maximum (0dB is maximum)
 #define RFM12_POWER           RFM12_TXCONF_POWER_0

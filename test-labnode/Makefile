@@ -1,9 +1,9 @@
 PRG            = txtest
-OBJ            = txtest.o rfm12.o uart.o
-MCU_TARGET     = atmega8
+OBJ            = main.o rfm12.o uart/uart.o
+MCU_TARGET     = atmega32
 OPTIMIZE       = -Os
 
-FLASHCMD       = avrdude -c usbasp -p m8 -U flash:w:$(PRG).hex
+FLASHCMD       = avrdude -c usbasp -p $(MCU_TARGET) -U flash:w:$(PRG).hex
 ERASECMD       = uisp -dprog=bsd --erase
 LAUNCH_BOOTLOADER = foodloader-0.21/launcher/launch-bootloader
 
@@ -32,7 +32,7 @@ $(PRG).elf: $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 clean:
-	rm -rf *.o $(PRG).elf *.eps *.png *.pdf *.bak 
+	rm -rf *.o $(PRG).elf *.eps *.png *.pdf *.bak uart/*.o
 	rm -rf *.lst *.map $(EXTRA_CLEAN_FILES)
 
 flash:
