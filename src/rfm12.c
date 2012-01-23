@@ -72,7 +72,7 @@ rf_tx_buffer_t rf_tx_buffer;
 #if !(RFM12_TRANSMIT_ONLY)
 	//! Buffers and status to receive packets.
 	rf_rx_buffer_t rf_rx_buffers[2];
-#endif /* RFM12_USE_WAKEUP_TIMER */
+#endif /* RFM12_TRANSMIT_ONLY */
 
 //! Global control and status.
 rfm12_control_t ctrl;
@@ -331,12 +331,16 @@ start:
 			//if the wakeup timer is used, this will re-enable the wakeup timer bit
 			//the magic is done via defines
 			#if RFM12_LIVECTRL && !(RFM12_USE_WAKEUP_TIMER)
-			ctrl.pwrmgt_shadow &= ~(PWRMGT_ET); /* disable transmitter */
-			ctrl.pwrmgt_shadow |= RFM12_CMD_PWRMGT | RFM12_PWRMGT_ER; /* enable receiver */
-			rfm12_data (ctrl.pwrmgt_shadow);
+				ctrl.pwrmgt_shadow &= ~(PWRMGT_ET); /* disable transmitter */
+				ctrl.pwrmgt_shadow |= RFM12_CMD_PWRMGT | RFM12_PWRMGT_ER; /* enable receiver */
+				rfm12_data (ctrl.pwrmgt_shadow);
 			#else
-			/* added "| PWRMGT_DEFAULT" - was this missing by mistake or on purpose? - soeren */
-			rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_RECEIVE | PWRMGT_DEFAULT); 
+				/* added "| PWRMGT_DEFAULT" - was this missing by mistake or on purpose? - soeren */
+				rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_RECEIVE | PWRMGT_DEFAULT); 
+			#endif
+			
+			#ifdef RX_ENTER_HOOK
+				RX_ENTER_HOOK;
 			#endif
 			
 			//load a dummy byte to clear int status
