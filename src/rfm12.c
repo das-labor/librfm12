@@ -49,7 +49,7 @@
 
 //for uart debugging
 #if RFM12_UART_DEBUG
-	#include "test-m8/uart.h"
+	#include "../test-m8/uart.h"
 #endif
 
 #if RFM12_USE_RX_CALLBACK
@@ -144,6 +144,11 @@ start:
 	//to get the interrupt flags
 	status = rfm12_read_int_flags_inline();
 
+	#if RFM12_UART_DEBUG >= 2
+		uart_putc('S');
+		uart_putc(status);
+	#endif
+
 	//low battery detector feature
 	#if RFM12_LOW_BATT_DETECTOR
 		if(status & (RFM12_STATUS_LBD>>8))
@@ -167,6 +172,9 @@ start:
 				uart_putc('W');
 			#endif
 			
+			ctrl.wkup_flag = 1;
+		}
+		if(status & ((RFM12_STATUS_WKUP | RFM12_STATUS_FFIT)>>8) ){
 			//restart the wakeup timer by toggling the bit on and off
 			rfm12_data(ctrl.pwrmgt_shadow & ~RFM12_PWRMGT_EW);
 			rfm12_data(ctrl.pwrmgt_shadow);
@@ -224,17 +232,16 @@ start:
 			
 			}break;
 			
-		case STATE_RX_ACTIVE:
+		case STATE_RX_ACTIVE:{
 			//if receive mode is not disabled (default)
 			#if !(RFM12_TRANSMIT_ONLY)
+				uint8_t data;
+				//read a byte
+				data = rfm12_read_fifo_inline();
+				
 				//check if transmission is complete
 				if(ctrl.bytecount < ctrl.num_bytes)
 				{
-					uint8_t data;
-					
-					//read a byte
-					data = rfm12_read_fifo_inline();
-					
 					//debug
 					#if RFM12_UART_DEBUG >= 2
 						uart_putc('R');
@@ -291,7 +298,7 @@ start:
 					rfm12_rx_clear(); /* clear immediately since the data has been processed by the callback func */
 				#endif
 			#endif /* !(RFM12_TRANSMIT_ONLY) */
-			break;
+			}break;
 			
 		case STATE_TX:
 			//debug
@@ -344,6 +351,9 @@ start:
 	
 	//reset the receiver fifo, if receive mode is not disabled (default)
 	#if !(RFM12_TRANSMIT_ONLY)
+		#if RFM12_UART_DEBUG >= 2
+			uart_putc('F');
+		#endif
 		rfm12_data_inline(RFM12_CMD_FIFORESET>>8, CLEAR_FIFO_INLINE);
 		rfm12_data_inline(RFM12_CMD_FIFORESET>>8, ACCEPT_DATA_INLINE);
 	#endif /* !(RFM12_TRANSMIT_ONLY) */
@@ -351,6 +361,11 @@ start:
 	goto start; //check the interrupt condition again, and only exit when there is none.
 
 	END:
+	#if RFM12_UART_DEBUG >= 2
+		uart_putc('E');
+	#endif
+
+	
 	//turn the int back on
 	RFM12_INT_ON();
 }
@@ -415,11 +430,26 @@ void rfm12_tick(void)
 	//collision detection is enabled by default
 	#if !(RFM12_NOCOLLISIONDETECTION)
 		//disable the interrupt (as we're working directly with the transceiver now)
-		//we won't loose interrupts, as the AVR caches them in the int flag
+		//hint: we could be losing an interrupt here, because we read the status register.
+		//this applys for the Wakeup timer, as it's flag is reset by reading.
 		RFM12_INT_OFF();
 		status = rfm12_read(RFM12_CMD_STATUS);
 		RFM12_INT_ON();
 
+		//wakeup timer workaround (if we don't restart the timer after timeout, it will stay off.)
+		#if RFM12_USE_WAKEUP_TIMER
+			if(status & (RFM12_STATUS_WKUP))
+			{
+				ctrl.wkup_flag = 1;
+
+				RFM12_INT_OFF();
+				//restart the wakeup timer by toggling the bit on and off
+				rfm12_data(ctrl.pwrmgt_shadow & ~RFM12_PWRMGT_EW);
+				rfm12_data(ctrl.pwrmgt_shadow);
+				RFM12_INT_ON();
+			}
+		#endif /* RFM12_USE_WAKEUP_TIMER */
+		
 		//check if we see a carrier
 		if(status & RFM12_STATUS_RSSI)
 		{

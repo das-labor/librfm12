@@ -250,13 +250,19 @@
 	* See the rf12 datasheet for valid values.
 	*/
 	void rfm12_set_wakeup_timer(uint16_t val)
-	{	
+	{
+		//disable the interrupt (as we're working directly with the transceiver now)
+		//we won't loose interrupts, as the AVR caches them in the int flag
+		RFM12_INT_OFF();
+		
 		//set wakeup timer
 		rfm12_data (RFM12_CMD_WAKEUP | (val & 0x1FFF));
 	
-		//reset wakeup timer
-		rfm12_data(RFM12_CMD_PWRMGT | (PWRMGT_DEFAULT & ~RFM12_PWRMGT_EW));
-		rfm12_data(RFM12_CMD_PWRMGT |  PWRMGT_DEFAULT);		
+		//restart the wakeup timer by toggling the bit on and off
+		rfm12_data(ctrl.pwrmgt_shadow & ~RFM12_PWRMGT_EW);
+		rfm12_data(ctrl.pwrmgt_shadow);
+		
+		RFM12_INT_ON();
 	}
 #endif /* RFM12_USE_WAKEUP_TIMER */
 
@@ -273,8 +279,14 @@
 	*/
 	void rfm12_set_batt_detector(uint16_t val)
 	{	
+		//disable the interrupt (as we're working directly with the transceiver now)
+		//we won't loose interrupts, as the AVR caches them in the int flag
+		RFM12_INT_OFF();
+		
 		//set the low battery detector and microcontroller clock divider register
 		rfm12_data (RFM12_CMD_LBDMCD | (val & 0x01FF));
+		
+		RFM12_INT_ON();
 	}
 	
 	//! Return the current low battery detector status.

@@ -4,11 +4,34 @@
 #include <util/delay.h>
 #include <string.h>
 #include <stdio.h>
+#include <avr/sleep.h>
 
 #include "rfm12.h"
 #include "uart/uart.h"
 
 
+static void wakeup_timer_test(){
+	printf_P(PSTR("wakeup timer test 1 second...\r\n"));
+	
+	//set the wakeup timer to 10 ms
+	rfm12_set_wakeup_timer(10);
+	uint8_t x;
+	for(x=0;x<100;x++){
+		printf_P(PSTR("."));
+		while(ctrl.wkup_flag == 0){
+			if (rfm12_rx_status() == STATUS_COMPLETE)
+			{
+				rfm12_rx_clear();
+			}
+			rfm12_tick();
+			//_delay_ms(1);
+			//uart_hexdump(ctrl.guard, 10);
+			//uart_hexdump(ctrl.guard1, 10);
+			
+		}
+		ctrl.wkup_flag = 0;
+	}
+}
 
 static void pingpong_test(){
 	uint8_t *bufcontents;
@@ -74,6 +97,11 @@ int main(){
 
 	rfm12_init();
 	sei();
+
+	wakeup_timer_test();
+	
+	//set the wakeup timer to 10 ms
+	rfm12_set_wakeup_timer(10);
 
 	pingpong_test();
 

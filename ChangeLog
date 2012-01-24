@@ -2,6 +2,14 @@
 
 2012-01-23
 
+* there was an evil bug, where rfm12.h did not include rfm12_core.h to configure #defines
+  this yielded structs, that looked different for rfm12 lib and user code....
+* Wakeup timer is finally working most of the time .... there still is a glitch somewhere
+
+------------------------------------------------------------------------
+
+2012-01-23
+
 * use of PWRMGT_DEFAULT makro in rfm12_config.h deprecated. wakeup timer and
   low battery detector handle this automatic.
 * RFM12_USE_CLOCK_OUTPUT makro added for config file. this turns on the clock output

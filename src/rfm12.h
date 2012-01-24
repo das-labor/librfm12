@@ -40,6 +40,8 @@
 #ifndef _RFM12_H
 #define _RFM12_H
 
+//this was missing, but is very important to set the config options for structs and such
+#include "include/rfm12_core.h"
 
 /** \name States for rx and tx buffers
 * \anchor rxtx_states
@@ -211,8 +213,16 @@ typedef struct
 		/** \see \ref batt_states "States for the low battery detection feature",
 		* as well as rfm12_set_batt_detector() and rfm12_get_batt_status()
 		*/
-		uint8_t low_batt;
+		volatile uint8_t low_batt;
 	#endif /* RFM12_LOW_BATT_DETECTOR */
+	
+	#if RFM12_USE_WAKEUP_TIMER
+		//! Wakeup timer flag.
+		/** The wakeup timer feature sets this flag from the interrupt on it's ticks */
+		volatile uint8_t wkup_flag;
+	#endif
+	
+	
 	#if RFM12_LIVECTRL
 		uint16_t rxctrl_shadow;
 		uint16_t afc_shadow;
