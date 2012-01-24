@@ -167,13 +167,13 @@
 //The TX-Part can also be used to control a TX-LED with the nomral RFM12
 
 /*
-	#define RX_INIT_HOOK  DDRD |= _BV(PD5)
-	#define RX_LEAVE_HOOK PORTD &= ~_BV(PD5)
-	#define RX_ENTER_HOOK PORTD |= _BV(PD5)
+	#define RX_INIT_HOOK  DDRA |= _BV(PA1)
+	#define RX_LEAVE_HOOK PORTA &= ~_BV(PA1)
+	#define RX_ENTER_HOOK PORTA |= _BV(PA1)
 	
-	#define TX_INIT_HOOK  DDRD |= _BV(PD4)
-	#define TX_LEAVE_HOOK PORTD &= ~_BV(PD4)
-	#define TX_ENTER_HOOK PORTD |= _BV(PD4)
+	#define TX_INIT_HOOK  DDRA |= _BV(PA2)
+	#define TX_LEAVE_HOOK PORTA &= ~_BV(PA2)
+	#define TX_ENTER_HOOK PORTA |= _BV(PA2)
 */
 
 /************************

@@ -1,6 +1,14 @@
 ------------------------------------------------------------------------
 
-2012-01-23
+2012-01-24
+
+* interrupt handler restructured from goto to do{}while(), fixed deadlock bug
+  completely: it could still occur if rx or tx interrupt occurred during servicing
+  wakeup timer interrupt.
+
+------------------------------------------------------------------------
+
+2012-01-24
 
 * there was an evil bug, where rfm12.h did not include rfm12_core.h to configure #defines
   this yielded structs, that looked different for rfm12 lib and user code....

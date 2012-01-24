@@ -39,6 +39,7 @@ static void pingpong_test(){
 	uint8_t tv[] = "foobar";
 
 	uint16_t ticker = 0;
+	uint16_t tocker = 5000;
 	
 	printf_P(PSTR("pingpong test\r\n"));
 
@@ -65,7 +66,7 @@ static void pingpong_test(){
 		}
 
 		ticker++;
-		if ((ticker == 500 ))
+		if ((ticker == 5000 ))
 		{
 			ticker = 0;
 			printf_P(PSTR(".\r\n"));
@@ -73,7 +74,24 @@ static void pingpong_test(){
 		}
 
 		rfm12_tick();
-		_delay_ms(1);
+		_delay_us(100);
+		
+		
+		
+		if(ctrl.wkup_flag){
+			ctrl.wkup_flag = 0;
+			tocker = 150;
+		}
+		
+		if(tocker == 0){
+			PORTA |= 1;
+			DDRA |= 1;
+		}else{
+			PORTA &= ~1;
+			DDRA |= 1;
+			tocker--;
+		}
+		
 	}
 }
 
