@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------
 
-2012-01-24
+2012-01-25
 
 * rfm12_data_delayed removed and replaced by rfm12_data_safe which turns off
   the interrupt while sending livectrl commands.
