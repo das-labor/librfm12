@@ -1,4 +1,4 @@
-PRG            = txtest
+PRG            = image
 OBJ            = main.o rfm12.o uart/uart.o
 MCU_TARGET     = atmega32
 OPTIMIZE       = -Os
@@ -17,6 +17,8 @@ LIBS           =
 # You should not have to change anything below here.
 
 CC             = avr-gcc
+SRC = $(OBJ:%.o=%.c)
+DEPENDFILE = .depend
 
 # Override is only needed by avr-lib build system.
 
@@ -26,21 +28,24 @@ override LDFLAGS       = -Wl,-Map,$(PRG).map
 OBJCOPY        = avr-objcopy
 OBJDUMP        = avr-objdump
 
-all: $(PRG).elf lst text eeprom
+all: dep $(PRG).elf lst text eeprom
 
 $(PRG).elf: $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 clean:
-	rm -rf *.o $(PRG).elf *.eps *.png *.pdf *.bak uart/*.o
+	rm -rf *.o $(PRG).elf uart/*.o
 	rm -rf *.lst *.map $(EXTRA_CLEAN_FILES)
 
-flash:
-#	$(ERASECMD)
-#	sleep 1
+dep: $(SRC)
+	$(CC) -mmcu=$(MCU_TARGET) $(DEFS) -MM $(SRC) > $(DEPENDFILE)
+
+-include $(DEPENDFILE)
+
+flash: all
 	$(FLASHCMD)
 
-sflash: $(PRG).hex
+sflash: all
 	$(LAUNCH_BOOTLOADER) $(SERIAL) 115200
 	avrdude -p m8 -b 115200 -u -c avr109 -P $(SERIAL) -U f:w:$(PRG).hex -F
 
