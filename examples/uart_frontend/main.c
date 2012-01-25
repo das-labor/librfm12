@@ -7,7 +7,7 @@
 #include <avr/sleep.h>
 
 #include "rfm12.h"
-#include "uart/uart.h"
+#include "../../uart_lib/uart.h"
 
 
 static void wakeup_timer_test(){

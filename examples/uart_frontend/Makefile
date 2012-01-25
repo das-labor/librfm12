@@ -1,6 +1,16 @@
+UART_LIB_DIR   = ../../uart_lib
+
 PRG            = image
-OBJ            = main.o rfm12.o uart/uart.o
-MCU_TARGET     = atmega32
+OBJ            = main.o rfm12.o $(UART_LIB_DIR)/uart.o
+
+-include ../make_config
+
+# these are set by config in parent dir
+#MCU_TARGET     = atmega32
+#DEFS           = -DF_CPU=16000000
+
+
+
 OPTIMIZE       = -Os
 
 FLASHCMD       = avrdude -c usbasp -p $(MCU_TARGET) -U flash:w:$(PRG).hex
@@ -11,7 +21,6 @@ LAUNCH_BOOTLOADER = foodloader-0.21/launcher/launch-bootloader
 SERIAL = /dev/ttyUSB0
 
 
-DEFS           = -DF_CPU=16000000
 LIBS           =
 
 # You should not have to change anything below here.
@@ -34,7 +43,7 @@ $(PRG).elf: $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 clean:
-	rm -rf *.o $(PRG).elf uart/*.o
+	rm -rf *.o $(PRG).elf $(UART_LIB_DIR)/*.o
 	rm -rf *.lst *.map $(EXTRA_CLEAN_FILES)
 
 dep: $(SRC)
