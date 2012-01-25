@@ -211,6 +211,23 @@
 	#define PORT_SPI_SS PORT_SPI
 #endif
 
+/*
+ * backward compatibility for rf channel settings
+ * these values weren't set in the config in older revisions of this library
+ * so we assume defaults here.
+ */
+
+#ifndef RFM12_XTAL_LOAD
+	#define               RFM12_XTAL_LOAD RFM12_XTAL_11_5PF
+#endif
+
+#ifndef RFM12_POWER
+	#define RFM12_POWER   RFM12_TXCONF_POWER_0
+#endif
+
+#ifndef FSK_SHIFT
+	#define FSK_SHIFT 125000
+#endif
 
 //baseband selection
 #if (RFM12_BASEBAND) == RFM12_BAND_433
