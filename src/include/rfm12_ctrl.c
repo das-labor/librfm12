@@ -39,10 +39,13 @@
 
 
 #if RFM12_LIVECTRL
-static rfm12_control_t *myctrl = 0x00;
-void rfm12_set_control_register (rfm12_control_t *in_p)
-{
-	myctrl = in_p;
+
+
+void rfm12_data_safe(uint16_t d){
+	//disable the interrupt (as we're working directly with the transceiver now)
+	RFM12_INT_OFF();
+	rfm12_data(d);
+	RFM12_INT_ON();
 }
 
 //! Set the data rate of the rf12.
@@ -56,7 +59,7 @@ void rfm12_set_control_register (rfm12_control_t *in_p)
 */
 void rfm12_set_rate (uint16_t in_datarate)
 {
-	rfm12_data_delayed(0, RFM12_CMD_DATARATE | DATARATE_VALUE );
+	rfm12_data_safe( RFM12_CMD_DATARATE | DATARATE_VALUE );
 }
 
 //! Set the frequency of the rf12.
@@ -68,7 +71,7 @@ void rfm12_set_rate (uint16_t in_datarate)
 */
 void rfm12_set_frequency (uint16_t in_freq)
 {
-	rfm12_data_delayed(0, RFM12_CMD_FREQUENCY | in_freq );
+	rfm12_data_safe( RFM12_CMD_FREQUENCY | in_freq );
 }
 
 /* set the rssi value. this can be done with either one of the macros defined
@@ -76,21 +79,20 @@ void rfm12_set_frequency (uint16_t in_freq)
  */
 void rfm12_set_rssi (uint8_t in_rssi)
 {
-	if (!myctrl) return;
-	
 	/* handle rssi bitmasks */
 	if (in_rssi <= RFM12_RXCTRL_RSSI_MASK)
 	{
-		myctrl->rxctrl_shadow &= ~(RFM12_RXCTRL_RSSI_MASK);
-		myctrl->rxctrl_shadow |= in_rssi;
-		rfm12_data (myctrl->rxctrl_shadow);
+		ctrl.rxctrl_shadow &= ~(RFM12_RXCTRL_RSSI_MASK);
+		ctrl.rxctrl_shadow |= in_rssi;
+		rfm12_data_safe (ctrl.rxctrl_shadow);
 		return;
 	} else if (in_rssi >= 61 && in_rssi <= 103)
 	{
 		uint8_t tmp = in_rssi - 61;
-		myctrl->rxctrl_shadow &= ~(RFM12_RXCTRL_RSSI_MASK);
-		myctrl->rxctrl_shadow |= (RFM12_RXCTRL_RSSI_MASK - (tmp / 6));
-		rfm12_data (myctrl->rxctrl_shadow);
+		ctrl.rxctrl_shadow &= ~(RFM12_RXCTRL_RSSI_MASK);
+		ctrl.rxctrl_shadow |= (RFM12_RXCTRL_RSSI_MASK - (tmp / 6));
+		rfm12_data_safe (ctrl.rxctrl_shadow);
+		
 	} else
 	{
 		/* invalid value given - don't change anything */
@@ -98,17 +100,22 @@ void rfm12_set_rssi (uint8_t in_rssi)
 	}
 }
 
-/* set the relative output power in -dB (from 0 to -21dB)
+/* set the relative output power in RFM12_TXCONF_POWER terms
  */
-void rfm12_set_txpower (uint8_t in_power)
+void rfm12_set_tx_power (uint8_t in_power)
 {
-	if (!myctrl) return;
-
-	myctrl->txconf_shadow &= ~(RFM12_TXCONF_POWER_MASK);
-	myctrl->txconf_shadow |= (in_power / 3);
-	rfm12_data_delayed (0, myctrl->txconf_shadow);
+	ctrl.txconf_shadow &= ~(RFM12_TXCONF_POWER_MASK);
+	ctrl.txconf_shadow |= in_power;
+	rfm12_data_safe ( ctrl.txconf_shadow);
 }
 
+/* set the frequency band to use
+ * accepted vlaues: RFM12_BAND_433 RFM12_BAND_315 RFM12_BAND_868 RFM12_BAND_915
+ */
+void rfm12_set_band (uint16_t in_band)
+{
+	rfm12_data_safe(RFM12_CMD_CFG | RFM12_CFG_EL | RFM12_CFG_EF | in_band | RFM12_XTAL_LOAD);
+}
 
 /* convenience function to send control commands to the rf12. This function
  * attempts to mask out bits that may've been set accidently.
@@ -153,32 +160,8 @@ uint16_t rfm12_sendcommand (uint16_t in_cmd, uint16_t in_payload)
 	}
 	
 	/* handle write-only commands */
-	rfm12_data_delayed (0, in_cmd | masked_payload);
+	rfm12_data ( in_cmd | masked_payload);
 	return 1;
-}
-
-void rfm12_data_delayed (uint8_t in_op, uint16_t in_cmd)
-{
-	static uint8_t num_cmds = 0;
-	static uint16_t cmds[RFM12_NUM_DELAYED_COMMANDS];
-
-	/* execute delayed commands */
-	if (in_op == 1)
-	{
-		while (num_cmds)
-		{
-			rfm12_data (cmds[num_cmds-1]);
-			num_cmds--;
-		}
-		return;
-	}
-
-	/* add command to queue */
-	if (num_cmds >= RFM12_NUM_DELAYED_COMMANDS)
-		return;	/* queue full */
-	
-	cmds[num_cmds] = in_cmd;
-	num_cmds++;
 }
 
 #endif

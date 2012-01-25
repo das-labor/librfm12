@@ -46,7 +46,9 @@
 #endif
 //see rfm12_ctrl.c for more documentation
 void rfm12_set_rate (uint16_t in_datarate);
+void rfm12_set_band (uint16_t in_band);
 void rfm12_set_frequency (uint16_t in_freq);
+void rfm12_set_tx_power (uint8_t in_power);
 void rfm12_set_rssi (uint8_t in_val);
 void rfm12_set_frequency_khz (uint16_t in_freq);
 uint16_t rfm12_sendcommand (uint16_t cmd, uint16_t in_payload);

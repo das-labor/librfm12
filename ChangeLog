@@ -2,6 +2,15 @@
 
 2012-01-24
 
+* rfm12_data_delayed removed and replaced by rfm12_data_safe which turns off
+  the interrupt while sending livectrl commands.
+* uart_frontend example with VT100 uart interface for controlling rfm12..
+  this ist still work in progress.
+
+------------------------------------------------------------------------
+
+2012-01-24
+
 * interrupt handler restructured from goto to do{}while(), fixed deadlock bug
   completely: it could still occur if rx or tx interrupt occurred during servicing
   wakeup timer interrupt.

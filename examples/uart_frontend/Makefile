@@ -1,7 +1,7 @@
 UART_LIB_DIR   = ../uart_lib
 
 PRG            = image
-OBJ            = main.o rfm12.o $(UART_LIB_DIR)/uart.o
+OBJ            = main.o rfm12.o menu.o menues.o settings.o terminal.o run_statemachines.o $(UART_LIB_DIR)/uart.o
 
 include ../make_config
 

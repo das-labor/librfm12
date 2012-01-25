@@ -782,8 +782,4 @@ void rfm12_init(void)
 	
 	//activate the interrupt
 	RFM12_INT_ON();	
-
-	#if RFM12_LIVECTRL
-	rfm12_set_control_register (&ctrl);
-	#endif
 }
