@@ -1,0 +1,3 @@
+
+MCU_TARGET     = atmega32
+DEFS           = -DF_CPU=16000000

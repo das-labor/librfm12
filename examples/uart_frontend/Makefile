@@ -1,9 +1,9 @@
-UART_LIB_DIR   = ../../uart_lib
+UART_LIB_DIR   = ../uart_lib
 
 PRG            = image
 OBJ            = main.o rfm12.o $(UART_LIB_DIR)/uart.o
 
--include ../make_config
+include ../make_config
 
 # these are set by config in parent dir
 #MCU_TARGET     = atmega32
