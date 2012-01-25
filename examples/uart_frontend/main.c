@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <avr/sleep.h>
+#include <avr/pgmspace.h>
 
 #include "rfm12.h"
 #include "../uart_lib/uart.h"
@@ -96,6 +97,42 @@ static void pingpong_test(){
 }
 
 
+void terminal_set_cursor_to_line_and_clear(uint8_t line){
+	//VT100      set cursor pos  clear current line
+	printf_P(PSTR( "\x1b[%d;1H"  "\x1b[2K" ) , line + 1);
+}
+
+void terminal_clear_screen(){
+	printf_P(PSTR( "\x1b[2J" ) );
+}
+
+void display_received_packets(){
+	uint8_t *buf;
+	uint8_t i;
+	static uint16_t count;
+
+	if (rfm12_rx_status() == STATUS_COMPLETE)
+	{
+		terminal_set_cursor_to_line_and_clear(0);
+
+		count++;
+		printf_P(PSTR("\x1b[3;3HRX %3d: "), count);
+
+		buf = rfm12_rx_buffer();
+
+		// dump buffer contents to uart
+		for (i=0;i<rfm12_rx_len();i++)
+		{
+			uart_putc ( buf[i] );
+		}
+		
+		// tell the implementation that the buffer
+		// can be reused for the next data.
+		rfm12_rx_clear();
+	}
+}
+
+
 int my_putc(char c, FILE * fp){
 	uart_putc(c);
 	return 0;
@@ -118,8 +155,15 @@ int main(){
 
 	wakeup_timer_test();
 	
-	//set the wakeup timer to 10 ms
-	rfm12_set_wakeup_timer(10);
+	terminal_clear_screen();
+	
+	//set the wakeup timer to 100 ms
+	rfm12_set_wakeup_timer(100);
+
+	while(1){
+		display_received_packets();
+		rfm12_tick();
+	}
 
 	pingpong_test();
 
