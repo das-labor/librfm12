@@ -41,22 +41,17 @@
 * function protoypes	
 */
 #if RFM12_LIVECTRL
-#ifndef RFM12_NUM_DELAYED_COMMANDS
-	#define RFM12_NUM_DELAYED_COMMANDS 4 /* defines how many commands to store for delayed execution */
-#endif
 //see rfm12_ctrl.c for more documentation
 void rfm12_set_rate (uint16_t in_datarate);
 void rfm12_set_band (uint16_t in_band);
 void rfm12_set_frequency (uint16_t in_freq);
 void rfm12_set_tx_power (uint8_t in_power);
+void rfm12_set_fsk_shift (uint8_t in_fsk);
 void rfm12_set_rssi (uint8_t in_val);
+void rfm12_set_bandwidth (uint8_t in_bw);
 void rfm12_set_frequency_khz (uint16_t in_freq);
 uint16_t rfm12_sendcommand (uint16_t cmd, uint16_t in_payload);
-void rfm12_set_control_register (rfm12_control_t *);
-/* called at the end of the interrupt/polling function in order to not interfere with
- * other transactions.
- */
-void rfm12_data_delayed (uint8_t in_op, uint16_t in_cmd);
+//void rfm12_set_control_register (rfm12_control_t *);
 #endif /* RFM12_LIVECTRL */
 
 #endif /* _RFM12_EXTRA_H */

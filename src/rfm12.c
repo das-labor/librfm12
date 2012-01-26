@@ -142,7 +142,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 	do{
 		//first we read the first byte of the status register
 		//to get the interrupt flags
-		status = rfm12_read_int_flags_inline();
+		status = rfm12_read(RFM12_CMD_STATUS)>>8;
 	
 		//if we use at least one of the status bits, we need to check the status again
 		//for the case in which another interrupt condition occured while we were handeling
@@ -205,7 +205,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 		
 						//read the length byte,  and write it to the checksum
 						//remember, the first byte is the length byte			
-						data = rfm12_read_fifo_inline();
+						data = rfm12_read(RFM12_CMD_READ);
 						checksum = data;
 						
 						//add the packet overhead and store it into a working variable
@@ -243,7 +243,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 					#if !(RFM12_TRANSMIT_ONLY)
 						uint8_t data;
 						//read a byte
-						data = rfm12_read_fifo_inline();
+						data = rfm12_read(RFM12_CMD_READ);
 						
 						//check if transmission is complete
 						if(ctrl.bytecount < ctrl.num_bytes)
@@ -315,7 +315,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 					if(ctrl.bytecount < ctrl.num_bytes)
 					{
 						//load the next byte from our buffer struct.
-						rfm12_data_inline( (RFM12_CMD_TX>>8), rf_tx_buffer.sync[ctrl.bytecount++]);
+						rfm12_data( RFM12_CMD_TX | rf_tx_buffer.sync[ctrl.bytecount++]);
 									
 						//end the interrupt without resetting the fifo
 						goto no_fifo_reset;
@@ -348,7 +348,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 					#endif
 					
 					//load a dummy byte to clear int status
-					rfm12_data_inline( (RFM12_CMD_TX>>8), 0xaa);
+					rfm12_data( RFM12_CMD_TX | 0xaa);
 					break;
 			}//end of switch
 		
@@ -360,8 +360,8 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 				#if RFM12_UART_DEBUG >= 2
 					uart_putc('F');
 				#endif
-				rfm12_data_inline(RFM12_CMD_FIFORESET>>8, CLEAR_FIFO_INLINE);
-				rfm12_data_inline(RFM12_CMD_FIFORESET>>8, ACCEPT_DATA_INLINE);
+				rfm12_data( RFM12_CMD_FIFORESET | CLEAR_FIFO_INLINE);
+				rfm12_data( RFM12_CMD_FIFORESET | ACCEPT_DATA_INLINE);
 			#endif /* !(RFM12_TRANSMIT_ONLY) */
 			
 			uint8_t b;
@@ -692,12 +692,12 @@ void rfm12_init(void)
 	//set rx parameters: int-in/vdi-out pin is vdi-out,
 	//Bandwith, LNA, RSSI
 	rfm12_data(RFM12_CMD_RXCTRL | RFM12_RXCTRL_P16_VDI 
-			| RFM12_RXCTRL_VDI_FAST | RFM12_RXCTRL_BW_400 | RFM12_RXCTRL_LNA_6 
-			| RFM12_RXCTRL_RSSI_79 );	
+			| RFM12_RXCTRL_VDI_FAST | RFM12_FILTER_BW | RFM12_LNA_GAIN 
+			| RFM12_RSSI_THRESHOLD );	
 	#if RFM12_LIVECTRL
 	ctrl.rxctrl_shadow = (RFM12_CMD_RXCTRL | RFM12_RXCTRL_P16_VDI 
-			| RFM12_RXCTRL_VDI_FAST | RFM12_RXCTRL_BW_400 | RFM12_RXCTRL_LNA_6 
-			| RFM12_RXCTRL_RSSI_79 );
+			| RFM12_RXCTRL_VDI_FAST | RFM12_FILTER_BW | RFM12_LNA_GAIN 
+			| RFM12_RSSI_THRESHOLD );
 	#endif
 	
 	//automatic clock lock control(AL), digital Filter(!S),

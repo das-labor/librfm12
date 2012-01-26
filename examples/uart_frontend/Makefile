@@ -1,7 +1,7 @@
 UART_LIB_DIR   = ../uart_lib
 
 PRG            = image
-OBJ            = main.o rfm12.o menu.o menues.o settings.o terminal.o run_statemachines.o $(UART_LIB_DIR)/uart.o
+OBJ            = main.o rfm12.o menu.o menues.o settings.o terminal.o run_statemachines.o xprintf.o $(UART_LIB_DIR)/uart.o
 
 include ../make_config
 
@@ -31,7 +31,7 @@ DEPENDFILE = .depend
 
 # Override is only needed by avr-lib build system.
 
-override CFLAGS        =  -g -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) $(DEFS)
+override CFLAGS        =  -g -Wall $(OPTIMIZE) -fno-jump-tables -mmcu=$(MCU_TARGET) $(DEFS)
 override LDFLAGS       = -Wl,-Map,$(PRG).map
 
 OBJCOPY        = avr-objcopy

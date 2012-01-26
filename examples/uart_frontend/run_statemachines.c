@@ -11,4 +11,5 @@ extern void display_received_packets();
 void run_statemachines(){
 	rfm12_tick();
 	display_received_packets();
+	transmit_packets();
 }

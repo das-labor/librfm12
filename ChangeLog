@@ -1,5 +1,12 @@
 ------------------------------------------------------------------------
 
+2012-01-26
+
+* additional livectrl functions
+* tests for the livectrl functions in uart_frontend example
+
+------------------------------------------------------------------------
+
 2012-01-25
 
 * rfm12_data_delayed removed and replaced by rfm12_data_safe which turns off

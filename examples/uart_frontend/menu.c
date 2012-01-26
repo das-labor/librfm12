@@ -27,13 +27,13 @@ uint8_t old_menu_pos;
 void draw_parameter(char * str){
 	terminal_set_cursor(menu_pos, 20);
 	terminal_clear_line_to_end();
-	printf(str);
+	xputs(str);
 }
 
 void draw_parameter_P(PGM_P str){
 	terminal_set_cursor(menu_pos, 20);
 	terminal_clear_line_to_end();
-	printf_P(str);
+	uart_putstr_P(str);
 }
 
 void draw_menu_entry(menu_t * menu, uint8_t menu_pos){
@@ -116,7 +116,7 @@ void show_uint8_setting(uint8_t * var){
 void handle_uint8_setting( uint8_t * var){
 	show_uint8_setting(var);
 	while(1){
-		uint16_t key;
+		uint8_t key;
 		if((key = terminal_get_key_nb()) != 0){
 			switch(key){
 				case KEY_UP:

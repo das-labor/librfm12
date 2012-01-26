@@ -59,7 +59,7 @@ void rfm12_data_safe(uint16_t d){
 */
 void rfm12_set_rate (uint16_t in_datarate)
 {
-	rfm12_data_safe( RFM12_CMD_DATARATE | DATARATE_VALUE );
+	rfm12_data_safe( RFM12_CMD_DATARATE | in_datarate );
 }
 
 //! Set the frequency of the rf12.
@@ -74,7 +74,8 @@ void rfm12_set_frequency (uint16_t in_freq)
 	rfm12_data_safe( RFM12_CMD_FREQUENCY | in_freq );
 }
 
-/* set the rssi value. this can be done with either one of the macros defined
+//! Set the receive RSSI threshold
+/** set the rssi value. this can be done with either one of the macros defined
  * in rfm12_hw.h (RFM12_RXCTRL_RSSI_*) or an unsigned integer value from 61 to 103.
  */
 void rfm12_set_rssi (uint8_t in_rssi)
@@ -100,6 +101,16 @@ void rfm12_set_rssi (uint8_t in_rssi)
 	}
 }
 
+//! Set the receive filter bandwidth
+/** use RFM12_RXCTRL_BW constants from rfm12_hw.h
+*/
+void rfm12_set_bandwidth (uint8_t in_bw)
+{
+	ctrl.rxctrl_shadow &= ~(RFM12_RXCTRL_BW_MASK);
+	ctrl.rxctrl_shadow |= in_bw & RFM12_RXCTRL_BW_MASK;
+	rfm12_data_safe (ctrl.rxctrl_shadow);
+}
+
 /* set the relative output power in RFM12_TXCONF_POWER terms
  */
 void rfm12_set_tx_power (uint8_t in_power)
@@ -109,6 +120,16 @@ void rfm12_set_tx_power (uint8_t in_power)
 	rfm12_data_safe ( ctrl.txconf_shadow);
 }
 
+/* set the fsk shift. Use datasheet or RFM12_TXCONF_FS_CALC(f) for values.
+ */
+void rfm12_set_fsk_shift (uint8_t in_fsk)
+{
+	ctrl.txconf_shadow &= ~(RFM12_TXCONF_POWER_MASK);
+	ctrl.txconf_shadow |= in_fsk & 0xf0;
+	rfm12_data_safe ( ctrl.txconf_shadow);
+}
+
+
 /* set the frequency band to use
  * accepted vlaues: RFM12_BAND_433 RFM12_BAND_315 RFM12_BAND_868 RFM12_BAND_915
  */
@@ -117,6 +138,7 @@ void rfm12_set_band (uint16_t in_band)
 	rfm12_data_safe(RFM12_CMD_CFG | RFM12_CFG_EL | RFM12_CFG_EF | in_band | RFM12_XTAL_LOAD);
 }
 
+#if 0
 /* convenience function to send control commands to the rf12. This function
  * attempts to mask out bits that may've been set accidently.
  */
@@ -163,5 +185,6 @@ uint16_t rfm12_sendcommand (uint16_t in_cmd, uint16_t in_payload)
 	rfm12_data ( in_cmd | masked_payload);
 	return 1;
 }
+#endif
 
 #endif

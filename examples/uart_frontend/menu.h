@@ -24,4 +24,6 @@ extern uint8_t leave_menu;
 void handle_uint8_setting( uint8_t * var);
 void show_uint8_setting(uint8_t * var);
 
-void handle_timecode_menu();
+void draw_parameter(char * str);
+
+void draw_parameter_P(PGM_P str);

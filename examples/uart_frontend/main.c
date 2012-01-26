@@ -10,19 +10,20 @@
 #include "terminal.h"
 #include "menu.h"
 #include "settings.h"
+#include "xprintf.h"
 
 #include "rfm12.h"
 #include "../uart_lib/uart.h"
 
 
 static void wakeup_timer_test(){
-	printf_P(PSTR("wakeup timer test 1 second...\r\n"));
+	xprintf_P(PSTR("wakeup timer test 1 second...\r\n"));
 	
 	//set the wakeup timer to 10 ms
 	rfm12_set_wakeup_timer(10);
 	uint8_t x;
 	for(x=0;x<100;x++){
-		printf_P(PSTR("."));
+		xprintf_P(PSTR("."));
 		while(ctrl.wkup_flag == 0){
 			if (rfm12_rx_status() == STATUS_COMPLETE)
 			{
@@ -34,68 +35,29 @@ static void wakeup_timer_test(){
 	}
 }
 
-static void pingpong_test(){
-	uint8_t *bufcontents;
-	uint8_t i;
+
+void transmit_packets(){
 	uint8_t tv[] = "foobar";
+	static uint16_t ticker = 0;
+	static uint16_t count;
 
-	uint16_t ticker = 0;
-	uint16_t tocker = 5000;
-	
-	printf_P(PSTR("pingpong test\r\n"));
-
-	while (42)
+	ticker++;
+	if ((ticker == 5000 ))
 	{
-		if (rfm12_rx_status() == STATUS_COMPLETE)
-		{
+		ticker = 0;
+		rfm12_tx (sizeof(tv), 0, tv);
 
-			printf_P(PSTR("new packet: "));
+		terminal_push_cursor();
 
-			bufcontents = rfm12_rx_buffer();
+		terminal_set_cursor_to_line_and_clear(11);
 
-			// dump buffer contents to uart
-			for (i=0;i<rfm12_rx_len();i++)
-			{
-				uart_putc ( bufcontents[i] );
-			}
-			
-			printf_P(PSTR("\r\n"));
-			// tell the implementation that the buffer
-			// can be reused for the next data.
-			rfm12_rx_clear();
+		count++;
+		xprintf_P(PSTR("TX %3d"), count);
 
-		}
+		terminal_pop_cursor();
 
-		ticker++;
-		if ((ticker == 5000 ))
-		{
-			ticker = 0;
-			printf_P(PSTR(".\r\n"));
-			rfm12_tx (sizeof(tv), 0, tv);
-		}
-
-		rfm12_tick();
-		_delay_us(100);
-		
-		
-		
-		if(ctrl.wkup_flag){
-			ctrl.wkup_flag = 0;
-			tocker = 150;
-		}
-		
-		if(tocker == 0){
-			PORTA |= 1;
-			DDRA |= 1;
-		}else{
-			PORTA &= ~1;
-			DDRA |= 1;
-			tocker--;
-		}
-		
 	}
 }
-
 
 
 void display_received_packets(){
@@ -105,11 +67,12 @@ void display_received_packets(){
 
 	if (rfm12_rx_status() == STATUS_COMPLETE)
 	{
-		printf_P(PSTR("\x1b" "7"));
+		terminal_push_cursor();
+
 		terminal_set_cursor_to_line_and_clear(10);
 
 		count++;
-		printf_P(PSTR("RX %3d: "), count);
+		xprintf_P(PSTR("RX %3d: "), count);
 
 		buf = rfm12_rx_buffer();
 
@@ -119,8 +82,8 @@ void display_received_packets(){
 			uart_putc ( buf[i] );
 		}
 		
-		printf_P(PSTR("\x1b" "8"));
-		
+		terminal_pop_cursor();
+				
 		// tell the implementation that the buffer
 		// can be reused for the next data.
 		rfm12_rx_clear();
@@ -141,11 +104,12 @@ int main(){
 	uart_init();
 
 	fdevopen(my_putc, 0);
+	xdev_out(uart_putc);
 
-	printf_P(PSTR("*** RFM12 Test ***\r\n"));
+	xprintf_P(PSTR("*** RFM12 Test ***\r\n"));
 	
 	_delay_ms(500);
-	printf_P(PSTR("rfm12_init()\r\n"));
+	xprintf_P(PSTR("rfm12_init()\r\n"));
 
 	rfm12_init();
 	load_settings();

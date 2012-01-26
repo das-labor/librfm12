@@ -218,16 +218,29 @@
  */
 
 #ifndef RFM12_XTAL_LOAD
-	#define               RFM12_XTAL_LOAD RFM12_XTAL_11_5PF
+	#define                         RFM12_XTAL_LOAD RFM12_XTAL_11_5PF
 #endif
 
 #ifndef RFM12_POWER
-	#define RFM12_POWER   RFM12_TXCONF_POWER_0
+	#define RFM12_POWER             RFM12_TXCONF_POWER_0
 #endif
 
 #ifndef FSK_SHIFT
 	#define FSK_SHIFT 125000
 #endif
+
+#ifndef RFM12_RSSI_THRESHOLD
+	#define RFM12_RSSI_THRESHOLD   RFM12_RXCTRL_RSSI_79
+#endif
+
+#ifndef RFM12_FILTER_BW
+	#define RFM12_FILTER_BW        RFM12_RXCTRL_BW_400
+#endif
+
+#ifndef RFM12_LNA_GAIN
+	#define RFM12_LNA_GAIN         RFM12_RXCTRL_LNA_6
+#endif
+
 
 //baseband selection
 #if (RFM12_BASEBAND) == RFM12_BAND_433

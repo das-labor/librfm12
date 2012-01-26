@@ -15,3 +15,5 @@ void terminal_clear_screen();
 void terminal_set_cursor_to_line_and_clear(uint8_t line);
 void terminal_set_cursor(uint8_t line, uint8_t x);
 void terminal_clear_line_to_end();
+void terminal_push_cursor();
+void terminal_pop_cursor();

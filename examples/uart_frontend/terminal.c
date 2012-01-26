@@ -1,34 +1,44 @@
 
 #include <stdio.h>
+#include "xprintf.h"
 #include "../uart_lib/uart.h"
 #include "terminal.h"
 
 void terminal_set_cursor(uint8_t line, uint8_t x){
 	//VT100      set cursor pos 
-	printf_P(PSTR( "\x1b[%d;%dH") , line + 1, x+1);
+	xprintf_P(PSTR( "\x1b[%d;%dH") , line + 1, x+1);
 }
 
 void terminal_clear_line_to_end(){
-	printf_P(PSTR( "\x1b[K"));
+	xprintf_P(PSTR( "\x1b[K"));
 }
 
 void terminal_set_cursor_to_line_and_clear(uint8_t line){
 	//VT100      set cursor pos  clear current line
-	printf_P(PSTR( "\x1b[%d;1H"  "\x1b[2K" ) , line + 1);
+	xprintf_P(PSTR( "\x1b[%d;1H"  "\x1b[2K" ) , line + 1);
 }
 
 void terminal_clear_screen(){
-	printf_P(PSTR( "\x1b[2J" ) );
+	xprintf_P(PSTR( "\x1b[2J" ) );
 }
+
+void terminal_push_cursor(){
+	xprintf_P(PSTR("\x1b" "7"));
+}
+
+void terminal_pop_cursor(){
+	xprintf_P(PSTR("\x1b" "8"));
+}
+
 
 void terminal_printline(uint8_t line, char * str){
 	terminal_set_cursor_to_line_and_clear(line);
-	printf(str);
+	xputs(str);
 }
 
 void terminal_printline_P(uint8_t line, PGM_P str){
 	terminal_set_cursor_to_line_and_clear(line);
-	printf_P(str);
+	xprintf_P(str);
 }
 
 uint16_t terminal_get_key_nb(){
