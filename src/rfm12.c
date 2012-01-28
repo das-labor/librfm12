@@ -37,6 +37,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <string.h>
+#include <avr/pgmspace.h>
 
 
 /************************
@@ -640,6 +641,59 @@ rfm12_start_tx(uint8_t type, uint8_t length)
 	}
 #endif /* !(RFM12_TRANSMIT_ONLY) */
 
+//set rx parameters: int-in/vdi-out pin is vdi-out,
+//Bandwith, LNA, RSSI	
+#define RFM12_CMD_RXCTRL_DEFAULT (RFM12_CMD_RXCTRL | RFM12_RXCTRL_P16_VDI | RFM12_RXCTRL_VDI_FAST | RFM12_FILTER_BW | RFM12_LNA_GAIN | RFM12_RSSI_THRESHOLD )
+
+//set AFC to automatic, (+4 or -3)*2.5kHz Limit, fine mode, active and enabled
+#define RFM12_CMD_AFC_DEFAULT  (RFM12_CMD_AFC | RFM12_AFC_AUTO_KEEP | RFM12_AFC_LIMIT_4 | RFM12_AFC_FI | RFM12_AFC_OE | RFM12_AFC_EN)
+
+//set TX Power, frequency shift 
+#define RFM12_CMD_TXCONF_DEFAULT  (RFM12_CMD_TXCONF | RFM12_POWER | RFM12_TXCONF_FS_CALC(FSK_SHIFT) )
+	
+static uint16_t init_cmds[] PROGMEM = {
+	//enable internal data register and fifo
+	//setup selected band
+	(RFM12_CMD_CFG | RFM12_CFG_EL | RFM12_CFG_EF | RFM12_BASEBAND | RFM12_XTAL_LOAD),
+	
+	//set power default state (usually disable clock output)
+	//do not write the power register two times in a short time
+	//as it seems to need some recovery
+	(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT),
+
+	//set frequency
+	(RFM12_CMD_FREQUENCY | RFM12_FREQUENCY_CALC(FREQ) ),
+
+	//set data rate
+	(RFM12_CMD_DATARATE | DATARATE_VALUE ),
+	
+	//defined above (so shadow register is inited with same value)
+	RFM12_CMD_RXCTRL_DEFAULT,
+	
+	//automatic clock lock control(AL), digital Filter(!S),
+	//Data quality detector value 3, slow clock recovery lock
+	(RFM12_CMD_DATAFILTER | RFM12_DATAFILTER_AL | 3),
+	
+	//2 Byte Sync Pattern, Start fifo fill when sychron pattern received,
+	//disable sensitive reset, Fifo filled interrupt at 8 bits
+	(RFM12_CMD_FIFORESET | RFM12_FIFORESET_DR | (8<<4)),
+
+	//defined above (so shadow register is inited with same value)
+	RFM12_CMD_AFC_DEFAULT,
+	
+	//defined above (so shadow register is inited with same value)
+	RFM12_CMD_TXCONF_DEFAULT,
+	
+	//disable low dutycycle mode
+	(RFM12_CMD_DUTYCYCLE),
+	
+	//disable wakeup timer
+	(RFM12_CMD_WAKEUP),
+	
+	//enable rf receiver chain, if receiving is not disabled (default)
+	//the magic is done via defines
+	(RFM12_CMD_PWRMGT | PWRMGT_RECEIVE),
+};
 
 //! This is the main library initialization function
 /**This function takes care of all module initialization, including:
@@ -665,6 +719,7 @@ void rfm12_init(void)
 	DDR_SS |= (1<<BIT_SS);
 	spi_init();
 
+	//typically sets DDR registers for RFM12BP TX/RX pin
 	#ifdef TX_INIT_HOOK
 		TX_INIT_HOOK;
 	#endif
@@ -673,61 +728,6 @@ void rfm12_init(void)
 		RX_INIT_HOOK;
 	#endif
 	
-
-	//enable internal data register and fifo
-	//setup selected band
-	rfm12_data(RFM12_CMD_CFG | RFM12_CFG_EL | RFM12_CFG_EF | RFM12_BASEBAND | RFM12_XTAL_LOAD);
-	
-	//set power default state (usually disable clock output)
-	//do not write the power register two times in a short time
-	//as it seems to need some recovery
-	rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT);
-
-	//set frequency
-	rfm12_data(RFM12_CMD_FREQUENCY | RFM12_FREQUENCY_CALC(FREQ) );
-
-	//set data rate
-	rfm12_data(RFM12_CMD_DATARATE | DATARATE_VALUE );
-	
-	//set rx parameters: int-in/vdi-out pin is vdi-out,
-	//Bandwith, LNA, RSSI
-	rfm12_data(RFM12_CMD_RXCTRL | RFM12_RXCTRL_P16_VDI 
-			| RFM12_RXCTRL_VDI_FAST | RFM12_FILTER_BW | RFM12_LNA_GAIN 
-			| RFM12_RSSI_THRESHOLD );	
-	#if RFM12_LIVECTRL
-	ctrl.rxctrl_shadow = (RFM12_CMD_RXCTRL | RFM12_RXCTRL_P16_VDI 
-			| RFM12_RXCTRL_VDI_FAST | RFM12_FILTER_BW | RFM12_LNA_GAIN 
-			| RFM12_RSSI_THRESHOLD );
-	#endif
-	
-	//automatic clock lock control(AL), digital Filter(!S),
-	//Data quality detector value 3, slow clock recovery lock
-	rfm12_data(RFM12_CMD_DATAFILTER | RFM12_DATAFILTER_AL | 3);
-	
-	//2 Byte Sync Pattern, Start fifo fill when sychron pattern received,
-	//disable sensitive reset, Fifo filled interrupt at 8 bits
-	rfm12_data(RFM12_CMD_FIFORESET | RFM12_FIFORESET_DR | (8<<4));
-
-	//set AFC to automatic, (+4 or -3)*2.5kHz Limit, fine mode, active and enabled
-	rfm12_data(RFM12_CMD_AFC | RFM12_AFC_AUTO_KEEP | RFM12_AFC_LIMIT_4
-				| RFM12_AFC_FI | RFM12_AFC_OE | RFM12_AFC_EN);
-	#if RFM12_LIVECTRL
-	ctrl.afc_shadow = (RFM12_CMD_AFC | RFM12_AFC_AUTO_KEEP | RFM12_AFC_LIMIT_4
-				| RFM12_AFC_FI | RFM12_AFC_OE | RFM12_AFC_EN);
-	#endif
-	
-	//set TX Power to -0dB, frequency shift = +-125kHz
-	rfm12_data(RFM12_CMD_TXCONF | RFM12_POWER | RFM12_TXCONF_FS_CALC(FSK_SHIFT) );
-	#if RFM12_LIVECTRL
-	ctrl.txconf_shadow = (RFM12_CMD_TXCONF | RFM12_POWER | RFM12_TXCONF_FS_CALC(FSK_SHIFT) );
-	#endif
-	
-	//disable low dutycycle mode
-	rfm12_data(RFM12_CMD_DUTYCYCLE);
-	
-	//disable wakeup timer
-	rfm12_data(RFM12_CMD_WAKEUP);
-
 	//store the syncronization pattern to the transmission buffer
 	//the sync pattern is used by the receiver to distinguish noise from real transmissions
 	//the sync pattern is hardcoded into the receiver
@@ -746,15 +746,25 @@ void rfm12_init(void)
 		ctrl.low_batt = RFM12_BATT_OKAY;
 	#endif /* RFM12_LOW_BATT_DETECTOR */
 	
-	//enable rf receiver chain, if receiving is not disabled (default)
-	//the magic is done via defines
-	rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_RECEIVE);
-	
 	#if RFM12_PWRMGT_SHADOW
 		//set power management shadow register to receiver chain enabled or disabled
 		//the define correctly handles the transmit only mode
 		ctrl.pwrmgt_shadow = (RFM12_CMD_PWRMGT | PWRMGT_RECEIVE);
 	#endif
+	
+	
+	#if RFM12_LIVECTRL
+		//init shadow registers with values about to be written to rfm12
+		ctrl.rxctrl_shadow = RFM12_CMD_RXCTRL_DEFAULT;
+		ctrl.afc_shadow = RFM12_CMD_AFC_DEFAULT;
+		ctrl.txconf_shadow = RFM12_CMD_TXCONF_DEFAULT;
+	#endif
+
+	//write all the initialisation values to rfm12
+	uint8_t x;
+	for(x=0; x < ( sizeof(init_cmds) / 2) ; x++){
+		rfm12_data(pgm_read_word(&init_cmds[x]));
+	}
 	
 	#ifdef RX_ENTER_HOOK
 		RX_ENTER_HOOK;
