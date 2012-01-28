@@ -1,6 +1,16 @@
 
 #define UART_BAUD_RATE 115200
 
+
+/************************
+ * Debug LED for examples
+ */
+
+#define LED_PORT  PORTB
+#define LED_DDR    DDRB
+#define LED_BIT     PB0
+
+
 /************************
  * RFM12 PIN DEFINITIONS
  */

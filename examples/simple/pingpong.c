@@ -4,63 +4,70 @@
 #include <string.h>
 
 #include "rfm12.h"
-#include "uart.h"
-
+#include "../uart_lib/uart.h"
 
 int main ( void )
 {
-	uint8_t *bufcontents;
+	uint8_t *bufptr;
 	uint8_t i;
 	uint8_t tv[] = "foobar";
 
 	uint16_t ticker = 0;
-
 	
+	#ifdef LED_PORT
+		LED_DDR |= _BV(LED_BIT); //enable LED if any
+	#endif
+
 	uart_init();
-	DDRD |= (_BV(PD7));
-	PORTD |= _BV(PD7);
 
-	_delay_ms(250);
-	_delay_ms(250);
-	_delay_ms(250);
-	rfm12_init();
+	_delay_ms(100);  //little delay for the rfm12 to initialize properly
+	rfm12_init();    //init the RFM12
 	
-	sei();
+	sei();           //interrupts on
 
-	uart_putstr ("\r\n");
-	uart_putstr ("Hello\r\n");
+	uart_putstr ("\r\n" "RFM12 Pingpong test\r\n");
 
-	while (42)
+	while (42) //while the universe and everything
 	{
-		ticker++;
-		if (ticker == 0) uart_putstr ("\r\n.");
-
 		if (rfm12_rx_status() == STATUS_COMPLETE)
 		{
+			//so we have received a message
 
-			uart_putstr ("new packet:\r\n");
+			//blink the LED
+			#ifdef LED_PORT
+				LED_PORT ^= _BV(LED_BIT);
+			#endif
 
-			bufcontents = rfm12_rx_buffer();
+			uart_putstr ("new packet: \"");
+
+			bufptr = rfm12_rx_buffer(); //get the address of the current rx buffer
 
 			// dump buffer contents to uart			
 			for (i=0;i<rfm12_rx_len();i++)
 			{
-				uart_putc ( bufcontents[i] );
+				uart_putc ( bufptr[i] );
 			}
+			
+			uart_putstr ("\"\r\n");
 			
 			// tell the implementation that the buffer
 			// can be reused for the next data.
 			rfm12_rx_clear();
-
 		}
 
 
-//		if (!(PINB & (_BV(PB0))) && (ticker % 3000 == 0))
-//		{
-//			uart_putc ('#');
+		ticker ++;
+		if(ticker == 3000){
+			ticker = 0;
+			uart_putstr (".\r\n");
 			rfm12_tx (sizeof(tv), 0, tv);
-//		}
+		}
 
+		//rfm12 needs to be called from your main loop periodically.
+		//it checks if the rf channel is free (no one else transmitting), and then
+		//sends packets, that have been queued by rfm12_tx above.
 		rfm12_tick();
+		
+		_delay_us(100); //small delay so loop doesn't run as fast
 	}
 }
