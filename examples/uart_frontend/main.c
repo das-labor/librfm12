@@ -16,6 +16,7 @@
 #include "../uart_lib/uart.h"
 
 
+#if RFM12_USE_WAKEUP_TIMER
 static void wakeup_timer_test(){
 	xprintf_P(PSTR("wakeup timer test 1 second...\r\n"));
 	
@@ -33,7 +34,9 @@ static void wakeup_timer_test(){
 		}
 		ctrl.wkup_flag = 0;
 	}
+	rfm12_set_wakeup_timer(100);
 }
+#endif
 
 
 void transmit_packets(){
@@ -91,19 +94,12 @@ void display_received_packets(){
 }
 
 
-int my_putc(char c, FILE * fp){
-	uart_putc(c);
-	return 0;
-}
-
 extern menu_t rf_menu;
 
 int main(){
 
 
 	uart_init();
-
-	fdevopen(my_putc, 0);
 	xdev_out(uart_putc);
 
 	xprintf_P(PSTR("*** RFM12 Test ***\r\n"));
@@ -115,14 +111,14 @@ int main(){
 	load_settings();
 	sei();
 
-	wakeup_timer_test();
+	#if RFM12_USE_WAKEUP_TIMER
+		wakeup_timer_test();
+	#endif
 	
 	terminal_clear_screen();
 	
-	//set the wakeup timer to 100 ms
-	rfm12_set_wakeup_timer(100);
-
-	handle_menu(&rf_menu);
+	//handle_menu(&rf_menu);
+	handle_settings_menu();
 
 	while(1);
 

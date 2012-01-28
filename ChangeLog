@@ -1,5 +1,16 @@
 ------------------------------------------------------------------------
 
+2012-01-28
+
+* totally new table based livectrl implementation
+* switchable livectrl client support from library (get strings for parameters)
+* livectrl client support also useable over remote connection: only one
+  simple rfm12_livectrl(uint8_t cmd, uint16_t value) function,
+  where the parameters can be passed from a remote client.
+* parameter load / save and client implementation in examples/uart_frontend
+
+------------------------------------------------------------------------
+
 2012-01-26
 
 * additional livectrl functions

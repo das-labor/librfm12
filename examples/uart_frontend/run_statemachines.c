@@ -7,6 +7,7 @@
 //implemented as statemachine.
 
 extern void display_received_packets();
+extern void transmit_packets();
 
 void run_statemachines(){
 	rfm12_tick();

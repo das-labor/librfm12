@@ -297,6 +297,6 @@ extern rfm12_control_t ctrl;
  * this way the user only needs to include rfm12.h
 */
 #include "include/rfm12_extra.h"
-#include "include/rfm12_ctrl.h"
+#include "include/rfm12_livectrl.h"
 
 #endif /* _RFM12_H */

@@ -90,7 +90,7 @@ rfm12_control_t ctrl;
  * include control / init functions into here
  * all of the stuff in there is optional, so there's no code-bloat..
 */
-#include "include/rfm12_ctrl.c"
+#include "include/rfm12_livectrl.c"
 
 /*
  * include extra features here

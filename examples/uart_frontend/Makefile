@@ -1,7 +1,7 @@
 UART_LIB_DIR   = ../uart_lib
 
 PRG            = image
-OBJ            = main.o rfm12.o menu.o menues.o settings.o terminal.o run_statemachines.o xprintf.o $(UART_LIB_DIR)/uart.o
+OBJ            = main.o rfm12.o settings.o terminal.o run_statemachines.o xprintf.o $(UART_LIB_DIR)/uart.o
 
 include ../make_config
 
@@ -50,6 +50,10 @@ dep: $(SRC)
 	$(CC) -mmcu=$(MCU_TARGET) $(DEFS) -MM $(SRC) > $(DEPENDFILE)
 
 -include $(DEPENDFILE)
+
+size: image.elf
+	avr-nm -S --size-sort image.elf
+	avr-size *.o *.elf
 
 flash: all
 	$(FLASHCMD)
