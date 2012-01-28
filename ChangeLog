@@ -2,6 +2,17 @@
 
 2012-01-28
 
+* included rfm12_read_interrupt_flags_inline() again for performance
+  reasons (interrupt handler might be to slow on 115200 Baud otherwise)
+* clear interrupt flag before checking status (there is a glitch sometimes
+  while the int line goes high, which triggers another interrupt otherweise,
+  which also hurts performance
+* LNA controllable over rfm12_livectrl
+
+------------------------------------------------------------------------
+
+2012-01-28
+
 * reworked rfm12_init to use programspace table of init values. saves 40 Bytes.
 
 ------------------------------------------------------------------------

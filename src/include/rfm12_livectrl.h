@@ -58,10 +58,11 @@ extern livectrl_cmd_t livectrl_cmds[];
 #define RFM12_LIVECTRL_DATARATE   2
 #define RFM12_LIVECTRL_TX_POWER   3
 #define RFM12_LIVECTRL_FSK_SHIFT  4
-#define RFM12_LIVECTRL_RSSI       5
-#define RFM12_LIVECTRL_FILTER_BW  6
+#define RFM12_LIVECTRL_LNA        5
+#define RFM12_LIVECTRL_RSSI       6
+#define RFM12_LIVECTRL_FILTER_BW  7
 
-#define NUM_LIVECTRL_CMDS         7
+#define NUM_LIVECTRL_CMDS         8
 
 void rfm12_livectrl(uint8_t cmd, uint16_t value);
 

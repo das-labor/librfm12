@@ -158,13 +158,23 @@
 		xsprintf_P(s, PSTR("+-%d kHz"), val); 
 	}
 	
+	void lna_to_string(char * s, uint16_t  var){
+		uint8_t val = var;
+		val >>= 3; //right adjust
+		
+		switch (val){
+			case 1: val = 6; break;
+			case 2: val = 14; break;
+			case 3: val = 20; break;
+		}
+		
+		xsprintf_P(s, PSTR("%3d dB"), -val);
+	}
 	
 	void rssi_to_string(char * s, uint16_t  val){
 		xsprintf_P(s, PSTR("%4d dBm"), -61 - (7-val) * 6); 
 	}
-	
-	
-	
+		
 	void filter_bw_to_string(char * s, uint16_t  val){
 		val >>= 5; //right adjust
 		
@@ -187,6 +197,7 @@ livectrl_cmd_t livectrl_cmds[] = {
 	{ RFM12_CMD_DATARATE,  RFM12_DATARATE_MASK,     0,                   DATARATE_VALUE,                  IFCLIENT(0x03,   0xff,    1, "Data rate" , datarate_to_string  )},
 	{ RFM12_CMD_TXCONF,    RFM12_TXCONF_POWER_MASK, &ctrl.txconf_shadow, RFM12_POWER,                     IFCLIENT(0x00,   0x07,    1, "TX Power"  , tx_power_to_string  )},
 	{ RFM12_CMD_TXCONF,    RFM12_TXCONF_FSK_MASK,   &ctrl.txconf_shadow, RFM12_TXCONF_FS_CALC(FSK_SHIFT), IFCLIENT(0x00,   0xf0, 0x10, "FSK Shift" , fsk_shift_to_string )},
+	{ RFM12_CMD_RXCTRL,    RFM12_RXCTRL_LNA_MASK,   &ctrl.rxctrl_shadow, RFM12_LNA_GAIN,                  IFCLIENT(0x00,   0x18, 0x08, "LNA"       , lna_to_string      )},
 	{ RFM12_CMD_RXCTRL,    RFM12_RXCTRL_RSSI_MASK,  &ctrl.rxctrl_shadow, RFM12_RSSI_THRESHOLD,            IFCLIENT(0x00,   0x07,    1, "RSSI"      , rssi_to_string      )},
 	{ RFM12_CMD_RXCTRL,    RFM12_RXCTRL_BW_MASK,    &ctrl.rxctrl_shadow, RFM12_FILTER_BW,                 IFCLIENT(0x20,   0xC0, 0x20, "Filter BW" , filter_bw_to_string )},
 };
@@ -216,6 +227,8 @@ void rfm12_livectrl(uint8_t cmd, uint16_t value){
 		tmp &= ~livectrl_cmd->rfm12_hw_parameter_mask;//clear parameter bits
 	}
 	tmp |= livectrl_cmd->rfm12_hw_command | (livectrl_cmd->rfm12_hw_parameter_mask & value);
+	
+	*livectrl_cmd->shadow_register = tmp;
 	
 	rfm12_data_safe(tmp);
 }

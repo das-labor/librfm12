@@ -141,9 +141,12 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 	#endif /* !(RFM12_TRANSMIT_ONLY) */
 
 	do{
+		//clear AVR int flag
+		RFM12_INT_FLAG = (1<<RFM12_FLAG_BIT);
+
 		//first we read the first byte of the status register
 		//to get the interrupt flags
-		status = rfm12_read(RFM12_CMD_STATUS)>>8;
+		status = rfm12_read_int_flags_inline();
 	
 		//if we use at least one of the status bits, we need to check the status again
 		//for the case in which another interrupt condition occured while we were handeling
