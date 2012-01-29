@@ -1,6 +1,6 @@
 
 #include <stdio.h>
-#include "xprintf.h"
+#include "../../src/xprintf/xprintf.h"
 #include "../uart_lib/uart.h"
 #include "terminal.h"
 

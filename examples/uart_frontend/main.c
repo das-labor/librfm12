@@ -10,7 +10,7 @@
 #include "terminal.h"
 #include "menu.h"
 #include "settings.h"
-#include "xprintf.h"
+#include "../../src/xprintf/xprintf.h"
 
 #include "rfm12.h"
 #include "../uart_lib/uart.h"
@@ -108,7 +108,7 @@ int main(){
 	xprintf_P(PSTR("rfm12_init()\r\n"));
 
 	rfm12_init();
-	load_settings();
+	rfm12_load_settings();
 	sei();
 
 	#if RFM12_USE_WAKEUP_TIMER

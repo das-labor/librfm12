@@ -41,7 +41,9 @@
 
 	#if __AVR__
 		#include <avr/pgmspace.h>
-		#include "../xprintf/xprintf.h"
+		//yes, we include the c file because of ease of configuration this way
+		//the C preprocessor can decide wether we need the file or not.
+		#include "../xprintf/xprintf.c"
 	#else
 		#define PSTR(s)    s
 		#define strcpy_P   strcpy
