@@ -66,6 +66,9 @@ extern livectrl_cmd_t livectrl_cmds[];
 
 void rfm12_livectrl(uint8_t cmd, uint16_t value);
 
+void rfm12_save_settings();
+void rfm12_load_settings();
+
 #if RFM12_LIVECTRL_CLIENT
 	void rfm12_livectrl_get_parameter_string(uint8_t cmd, char * str);
 #endif

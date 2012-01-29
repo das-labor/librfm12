@@ -39,9 +39,15 @@
 
 #if RFM12_LIVECTRL_CLIENT
 
-	#include <avr/pgmspace.h>
-	#include "../../examples/uart_frontend/xprintf.h"
-	
+	#if __AVR__
+		#include <avr/pgmspace.h>
+		#include "../xprintf/xprintf.h"
+	#else
+		#define PSTR(s)    s
+		#define strcpy_P   strcpy
+		#define xsprintf_P sprintf
+	#endif
+		
 	void baseband_to_string(char * s, uint16_t var){
 		switch(var){
 			case RFM12_BAND_315:
@@ -201,6 +207,45 @@ livectrl_cmd_t livectrl_cmds[] = {
 	{ RFM12_CMD_RXCTRL,    RFM12_RXCTRL_RSSI_MASK,  &ctrl.rxctrl_shadow, RFM12_RSSI_THRESHOLD,            IFCLIENT(0x00,   0x07,    1, "RSSI"      , rssi_to_string      )},
 	{ RFM12_CMD_RXCTRL,    RFM12_RXCTRL_BW_MASK,    &ctrl.rxctrl_shadow, RFM12_FILTER_BW,                 IFCLIENT(0x20,   0xC0, 0x20, "Filter BW" , filter_bw_to_string )},
 };
+
+
+#if RFM12_LIVECTRL_LOAD_SAVE_SETTINGS
+	#include <avr/eeprom.h>
+	
+	void rfm12_save_settings(){
+		uint8_t x;	
+		uint16_t checksumm = 0;
+		
+		for(x=0; x < NUM_LIVECTRL_CMDS; x++){
+			uint16_t val = livectrl_cmds[x].current_value;
+			checksumm += val;
+			eeprom_write_word((void*)(2*x), val);
+		}
+		
+		eeprom_write_word((void*)(2*x), checksumm);
+	}
+	
+	void rfm12_load_settings(){
+	
+		uint8_t x;
+		uint16_t val;	
+		uint16_t checksumm = 0;
+		
+		for(x=0; x < NUM_LIVECTRL_CMDS; x++){
+			val = eeprom_read_word((void*)(2*x));
+			checksumm += val;
+		}
+		
+		val = eeprom_read_word((void*)(2*x));
+		if( val != checksumm) return; //eeprom invalid, keep default values from array
+	
+		//set the settings if eeprom valid
+		for(x=0; x < NUM_LIVECTRL_CMDS; x++){
+			val = eeprom_read_word((void*)(2*x));
+			rfm12_livectrl(x, val);
+		}
+	}
+#endif
 
 #if RFM12_LIVECTRL_HOST
 	void rfm12_data_safe(uint16_t d){
