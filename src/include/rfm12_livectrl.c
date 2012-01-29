@@ -202,36 +202,38 @@ livectrl_cmd_t livectrl_cmds[] = {
 	{ RFM12_CMD_RXCTRL,    RFM12_RXCTRL_BW_MASK,    &ctrl.rxctrl_shadow, RFM12_FILTER_BW,                 IFCLIENT(0x20,   0xC0, 0x20, "Filter BW" , filter_bw_to_string )},
 };
 
-void rfm12_data_safe(uint16_t d){
-	//disable the interrupt (as we're working directly with the transceiver now)
-	RFM12_INT_OFF();
-	rfm12_data(d);
-	RFM12_INT_ON();
-}
-
-
-void rfm12_livectrl(uint8_t cmd, uint16_t value){
-	uint16_t tmp = 0; 
-	livectrl_cmd_t  * livectrl_cmd = &livectrl_cmds[cmd];
-
-	livectrl_cmd->current_value = value; //update current value
-	
-	//the shadow register is somewhat redundant with the current value,
-	//but it makes sense never the less:
-	//the current_value only saves the bits for this one setting (for menu,saving,loding settings)
-	//while the shadow register keeps track of ALL bits the rfm12 has in that register.
-	//the shadow will also be used from rfm12_tick or maybe the interrupt
-	
-	if(livectrl_cmd->shadow_register){
-		tmp = *livectrl_cmd->shadow_register;         //load shadow value if any
-		tmp &= ~livectrl_cmd->rfm12_hw_parameter_mask;//clear parameter bits
+#if RFM12_LIVECTRL_HOST
+	void rfm12_data_safe(uint16_t d){
+		//disable the interrupt (as we're working directly with the transceiver now)
+		RFM12_INT_OFF();
+		rfm12_data(d);
+		RFM12_INT_ON();
 	}
-	tmp |= livectrl_cmd->rfm12_hw_command | (livectrl_cmd->rfm12_hw_parameter_mask & value);
 	
-	*livectrl_cmd->shadow_register = tmp;
 	
-	rfm12_data_safe(tmp);
-}
+	void rfm12_livectrl(uint8_t cmd, uint16_t value){
+		uint16_t tmp = 0; 
+		livectrl_cmd_t  * livectrl_cmd = &livectrl_cmds[cmd];
+	
+		livectrl_cmd->current_value = value; //update current value
+		
+		//the shadow register is somewhat redundant with the current value,
+		//but it makes sense never the less:
+		//the current_value only saves the bits for this one setting (for menu,saving,loding settings)
+		//while the shadow register keeps track of ALL bits the rfm12 has in that register.
+		//the shadow will also be used from rfm12_tick or maybe the interrupt
+		
+		if(livectrl_cmd->shadow_register){
+			tmp = *livectrl_cmd->shadow_register;         //load shadow value if any
+			tmp &= ~livectrl_cmd->rfm12_hw_parameter_mask;//clear parameter bits
+		}
+		tmp |= livectrl_cmd->rfm12_hw_command | (livectrl_cmd->rfm12_hw_parameter_mask & value);
+		
+		*livectrl_cmd->shadow_register = tmp;
+		
+		rfm12_data_safe(tmp);
+	}
+#endif // RFM12_LIVECTRL_HOST
 
 #if RFM12_LIVECTRL_CLIENT
 	void rfm12_livectrl_get_parameter_string(uint8_t cmd, char * str){
