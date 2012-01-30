@@ -196,18 +196,24 @@
 	#define IFCLIENT(a,b,c,d,e)
 #endif // RFM12_LIVECTRL_CLIENT
 
+#if RFM12_LIVECTRL_HOST
+	#define IFHOST(a) a
+#else
+	#define IFHOST(a) 0
+#endif
+
 
 #define RFM12_CMD_CFG_PARM   (RFM12_CMD_CFG | RFM12_CFG_EL | RFM12_CFG_EF | RFM12_XTAL_LOAD)
 
 livectrl_cmd_t livectrl_cmds[] = {
-	{ RFM12_CMD_CFG_PARM,  RFM12_CFG_BAND_MASK,     0,                   RFM12_BASEBAND,                  IFCLIENT(0x00,   0x30, 0x10, "Baseband"  , baseband_to_string  )},
-	{ RFM12_CMD_FREQUENCY, RFM12_FREQUENCY_MASK,    0,                   RFM12_FREQUENCY_CALC(FREQ),      IFCLIENT(0x00, 0x0fff,    4, "Frequency" , frequency_to_string )},
-	{ RFM12_CMD_DATARATE,  RFM12_DATARATE_MASK,     0,                   DATARATE_VALUE,                  IFCLIENT(0x03,   0xff,    1, "Data rate" , datarate_to_string  )},
-	{ RFM12_CMD_TXCONF,    RFM12_TXCONF_POWER_MASK, &ctrl.txconf_shadow, RFM12_POWER,                     IFCLIENT(0x00,   0x07,    1, "TX Power"  , tx_power_to_string  )},
-	{ RFM12_CMD_TXCONF,    RFM12_TXCONF_FSK_MASK,   &ctrl.txconf_shadow, RFM12_TXCONF_FS_CALC(FSK_SHIFT), IFCLIENT(0x00,   0xf0, 0x10, "FSK Shift" , fsk_shift_to_string )},
-	{ RFM12_CMD_RXCTRL,    RFM12_RXCTRL_LNA_MASK,   &ctrl.rxctrl_shadow, RFM12_LNA_GAIN,                  IFCLIENT(0x00,   0x18, 0x08, "LNA"       , lna_to_string      )},
-	{ RFM12_CMD_RXCTRL,    RFM12_RXCTRL_RSSI_MASK,  &ctrl.rxctrl_shadow, RFM12_RSSI_THRESHOLD,            IFCLIENT(0x00,   0x07,    1, "RSSI"      , rssi_to_string      )},
-	{ RFM12_CMD_RXCTRL,    RFM12_RXCTRL_BW_MASK,    &ctrl.rxctrl_shadow, RFM12_FILTER_BW,                 IFCLIENT(0x20,   0xC0, 0x20, "Filter BW" , filter_bw_to_string )},
+	{ RFM12_CMD_CFG_PARM,  RFM12_CFG_BAND_MASK,     0,                           RFM12_BASEBAND,                  IFCLIENT(0x00,   0x30, 0x10, "Baseband"  , baseband_to_string  )},
+	{ RFM12_CMD_FREQUENCY, RFM12_FREQUENCY_MASK,    0,                           RFM12_FREQUENCY_CALC(FREQ),      IFCLIENT(0x00, 0x0fff,    4, "Frequency" , frequency_to_string )},
+	{ RFM12_CMD_DATARATE,  RFM12_DATARATE_MASK,     0,                           DATARATE_VALUE,                  IFCLIENT(0x03,   0xff,    1, "Data rate" , datarate_to_string  )},
+	{ RFM12_CMD_TXCONF,    RFM12_TXCONF_POWER_MASK, IFHOST(&ctrl.txconf_shadow), RFM12_POWER,                     IFCLIENT(0x00,   0x07,    1, "TX Power"  , tx_power_to_string  )},
+	{ RFM12_CMD_TXCONF,    RFM12_TXCONF_FSK_MASK,   IFHOST(&ctrl.txconf_shadow), RFM12_TXCONF_FS_CALC(FSK_SHIFT), IFCLIENT(0x00,   0xf0, 0x10, "FSK Shift" , fsk_shift_to_string )},
+	{ RFM12_CMD_RXCTRL,    RFM12_RXCTRL_LNA_MASK,   IFHOST(&ctrl.rxctrl_shadow), RFM12_LNA_GAIN,                  IFCLIENT(0x00,   0x18, 0x08, "LNA"       , lna_to_string      )},
+	{ RFM12_CMD_RXCTRL,    RFM12_RXCTRL_RSSI_MASK,  IFHOST(&ctrl.rxctrl_shadow), RFM12_RSSI_THRESHOLD,            IFCLIENT(0x00,   0x07,    1, "RSSI"      , rssi_to_string      )},
+	{ RFM12_CMD_RXCTRL,    RFM12_RXCTRL_BW_MASK,    IFHOST(&ctrl.rxctrl_shadow), RFM12_FILTER_BW,                 IFCLIENT(0x20,   0xC0, 0x20, "Filter BW" , filter_bw_to_string )},
 };
 
 
