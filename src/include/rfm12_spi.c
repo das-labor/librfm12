@@ -130,8 +130,10 @@ static void spi_init()
 {
 	DDR_MOSI   |= (_BV(BIT_MOSI));
 	DDR_SCK    |= (_BV(BIT_SCK));
-	PORT_SPI   |= (_BV(BIT_SPI_SS));
-	DDR_SPI    |= (_BV(BIT_SPI_SS));
+	#if !(RFM12_SPI_SOFTWARE)
+		PORT_SPI   |= (_BV(BIT_SPI_SS));
+		DDR_SPI    |= (_BV(BIT_SPI_SS));
+	#endif
 
 	DDR_MISO   &= ~(_BV(BIT_MISO));
 
