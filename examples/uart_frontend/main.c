@@ -78,11 +78,24 @@ void display_received_packets(){
 		xprintf_P(PSTR("RX %3d: "), count);
 
 		buf = rfm12_rx_buffer();
+		uint8_t len = rfm12_rx_len();
 
 		// dump buffer contents to uart
-		for (i=0;i<rfm12_rx_len();i++)
+		
+		
+		#ifdef UART_HEXDUMP
+			//as hexdump
+			uart_hexdump(buf, len);
+		#endif
+		
+		//as string
+		for (i=0;i<len;i++)
 		{
-			uart_putc ( buf[i] );
+			uint8_t c = buf[i];
+			if(c >= 0x20) //if printable 
+				uart_putc ( c );
+			else
+				uart_putc (0xff);
 		}
 		
 		terminal_pop_cursor();
