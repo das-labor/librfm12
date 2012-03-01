@@ -249,6 +249,15 @@
 	#define RFM12_CLOCK_OUT_FREQUENCY RFM12_CLOCK_OUT_FREQUENCY_1_00_MHz
 #endif
 
+#ifndef RFM12_FREQUENCY
+	#ifndef FREQ
+		#error "RFM12_FREQUENCY not defined."
+	#else
+		#define RFM12_FREQUENCY FREQ
+		#warning "using FREQ for RFM12_FREQUENCY. Please use RFM12_FREQUENCY in the future!"
+	#endif
+#endif
+
 //baseband selection
 #if (RFM12_BASEBAND) == RFM12_BAND_433
 	#define RFM12_FREQUENCY_CALC(x) RFM12_FREQUENCY_CALC_433(x)
