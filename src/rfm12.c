@@ -645,6 +645,11 @@ rfm12_start_tx(uint8_t type, uint8_t length)
 	}
 #endif /* !(RFM12_TRANSMIT_ONLY) */
 
+
+//enable internal data register and fifo
+//setup selected band
+#define RFM12_CMD_CFG_DEFAULT   (RFM12_CMD_CFG | RFM12_CFG_EL | RFM12_CFG_EF | RFM12_BASEBAND | RFM12_XTAL_LOAD)
+
 //set rx parameters: int-in/vdi-out pin is vdi-out,
 //Bandwith, LNA, RSSI	
 #define RFM12_CMD_RXCTRL_DEFAULT (RFM12_CMD_RXCTRL | RFM12_RXCTRL_P16_VDI | RFM12_RXCTRL_VDI_FAST | RFM12_FILTER_BW | RFM12_LNA_GAIN | RFM12_RSSI_THRESHOLD )
@@ -656,9 +661,8 @@ rfm12_start_tx(uint8_t type, uint8_t length)
 #define RFM12_CMD_TXCONF_DEFAULT  (RFM12_CMD_TXCONF | RFM12_POWER | RFM12_TXCONF_FS_CALC(FSK_SHIFT) )
 	
 static uint16_t init_cmds[] PROGMEM = {
-	//enable internal data register and fifo
-	//setup selected band
-	(RFM12_CMD_CFG | RFM12_CFG_EL | RFM12_CFG_EF | RFM12_BASEBAND | RFM12_XTAL_LOAD),
+	//defined above (so shadow register is inited with same value)
+	RFM12_CMD_CFG_DEFAULT,
 	
 	//set power default state (usually disable clock output)
 	//do not write the power register two times in a short time
@@ -762,6 +766,7 @@ void rfm12_init(void)
 		ctrl.rxctrl_shadow = RFM12_CMD_RXCTRL_DEFAULT;
 		ctrl.afc_shadow = RFM12_CMD_AFC_DEFAULT;
 		ctrl.txconf_shadow = RFM12_CMD_TXCONF_DEFAULT;
+		ctrl.cfg_shadow =    RFM12_CMD_CFG_DEFAULT;
 	#endif
 
 	//write all the initialisation values to rfm12

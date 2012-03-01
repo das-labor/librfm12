@@ -54,15 +54,16 @@ extern livectrl_cmd_t livectrl_cmds[];
 //these constants have to be in the same order as the elemts in the table
 //livectrl_cmds
 #define RFM12_LIVECTRL_BASEBAND   0
-#define RFM12_LIVECTRL_FREQUENCY  1
-#define RFM12_LIVECTRL_DATARATE   2
-#define RFM12_LIVECTRL_TX_POWER   3
-#define RFM12_LIVECTRL_FSK_SHIFT  4
-#define RFM12_LIVECTRL_LNA        5
-#define RFM12_LIVECTRL_RSSI       6
-#define RFM12_LIVECTRL_FILTER_BW  7
+#define RFM12_LIVECTRL_XTAL_LOAD  1
+#define RFM12_LIVECTRL_FREQUENCY  2
+#define RFM12_LIVECTRL_DATARATE   3
+#define RFM12_LIVECTRL_TX_POWER   4
+#define RFM12_LIVECTRL_FSK_SHIFT  5
+#define RFM12_LIVECTRL_LNA        6
+#define RFM12_LIVECTRL_RSSI       7
+#define RFM12_LIVECTRL_FILTER_BW  8
 
-#define NUM_LIVECTRL_CMDS         8
+#define NUM_LIVECTRL_CMDS         9
 
 void rfm12_livectrl(uint8_t cmd, uint16_t value);
 

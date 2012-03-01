@@ -227,6 +227,7 @@ typedef struct
 		uint16_t rxctrl_shadow;
 		uint16_t afc_shadow;
 		uint16_t txconf_shadow;
+		uint16_t cfg_shadow;
 	#endif
 } rfm12_control_t;
 

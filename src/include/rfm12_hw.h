@@ -39,7 +39,7 @@
 #	define RFM12_BAND_868 0x20
 #	define RFM12_BAND_915 0x30
 
-
+#   define RFM12_CFG_XTAL_MASK 0x0F
 #	define RFM12_XTAL_8_5PF  0x00
 #	define RFM12_XTAL_9_0PF  0x01
 #	define RFM12_XTAL_9_5PF  0x02

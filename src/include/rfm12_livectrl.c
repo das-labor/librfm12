@@ -190,6 +190,15 @@
 		
 		xsprintf_P(s, PSTR("%3d kHz"), val); 
 	}
+	
+	void xtal_load_to_string(char * s, uint16_t  val){
+		val += 1;
+		uint8_t pf = val/2 + 8;
+		uint8_t n = 0;
+		if(val & 0x01) n = 5;
+		xsprintf_P(s, PSTR("%2d.%dpF"), pf, n); 
+	}
+	
 
 	#define IFCLIENT(a,b,c,d,e) a,b,c,d,e
 #else // RFM12_LIVECTRL_CLIENT
@@ -202,11 +211,9 @@
 	#define IFHOST(a) 0
 #endif
 
-
-#define RFM12_CMD_CFG_PARM   (RFM12_CMD_CFG | RFM12_CFG_EL | RFM12_CFG_EF | RFM12_XTAL_LOAD)
-
 livectrl_cmd_t livectrl_cmds[] = {
-	{ RFM12_CMD_CFG_PARM,  RFM12_CFG_BAND_MASK,     0,                           RFM12_BASEBAND,                  IFCLIENT(0x00,   0x30, 0x10, "Baseband"  , baseband_to_string  )},
+	{ RFM12_CMD_CFG,       RFM12_CFG_BAND_MASK,     IFHOST(&ctrl.cfg_shadow),    RFM12_BASEBAND,                  IFCLIENT(0x00,   0x30, 0x10, "Baseband"  , baseband_to_string  )},
+	{ RFM12_CMD_CFG,       RFM12_CFG_XTAL_MASK,     IFHOST(&ctrl.cfg_shadow),    RFM12_XTAL_LOAD,                 IFCLIENT(0x00,   0x0f,    1, "Xtal Load" , xtal_load_to_string  )},
 	{ RFM12_CMD_FREQUENCY, RFM12_FREQUENCY_MASK,    0,                           RFM12_FREQUENCY_CALC(FREQ),      IFCLIENT(0x00, 0x0fff,    4, "Frequency" , frequency_to_string )},
 	{ RFM12_CMD_DATARATE,  RFM12_DATARATE_MASK,     0,                           DATARATE_VALUE,                  IFCLIENT(0x03,   0xff,    1, "Data rate" , datarate_to_string  )},
 	{ RFM12_CMD_TXCONF,    RFM12_TXCONF_POWER_MASK, IFHOST(&ctrl.txconf_shadow), RFM12_POWER,                     IFCLIENT(0x00,   0x07,    1, "TX Power"  , tx_power_to_string  )},
