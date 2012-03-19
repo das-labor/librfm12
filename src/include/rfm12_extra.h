@@ -120,6 +120,12 @@
 #endif /* RFM12_USE_WAKEUP_TIMER */
 
 
+
+#if RFM12_USE_POWER_CONTROL
+	void rfm12_power_down();
+	void rfm12_power_up();
+#endif
+
 /************************
  * rfm12 low battery detector mode
 */

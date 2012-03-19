@@ -268,6 +268,52 @@
 
 
 /************************
+ * rfm12 power up / power down
+*/
+
+#if RFM12_USE_POWER_CONTROL
+	//! This function powers down the rfm12 modules receiver to save power.
+	/**
+	 * It can not receive in that state.
+	 */	 	
+	void rfm12_power_down(){
+		//wait for rfm12 to get to state STATE_RX_IDLE
+		//before turning of the receiver.
+		//reason: this way transmissions that have been triggered before
+		//can be completed before we power down the rfm12.
+
+		while(ctrl.rfm12_state != STATE_RX_IDLE);
+	
+		//disable the interrupt (as we're working directly with the transceiver now)
+		//we won't loose interrupts, as the AVR caches them in the int flag
+		RFM12_INT_OFF();
+		
+		//disable receiver
+		rfm12_data(ctrl.pwrmgt_shadow & ~RFM12_PWRMGT_ER);
+		rfm12_data(ctrl.pwrmgt_shadow);
+
+		RFM12_INT_ON();
+	}
+	
+	//! This function powers the rfm12 modules receiver back up again
+	/**
+	 * Should only be called after rfm12_power_down()
+	 */	 	
+	void rfm12_power_up(){
+		//disable the interrupt (as we're working directly with the transceiver now)
+		//we won't loose interrupts, as the AVR caches them in the int flag
+		RFM12_INT_OFF();
+		
+		//enable receiver
+		rfm12_data(ctrl.pwrmgt_shadow | RFM12_PWRMGT_ER);
+		rfm12_data(ctrl.pwrmgt_shadow);
+
+		RFM12_INT_ON();
+	}
+
+#endif
+
+/************************
  * rfm12 low battery detector mode
 */
 
