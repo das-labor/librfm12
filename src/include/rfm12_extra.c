@@ -36,6 +36,7 @@
  *		(for performance reasons)				*
  ******************************************************/
 
+#include <stdlib.h>
  
 /************************
  * amplitude modulation receive mode
@@ -288,10 +289,14 @@
 		//we won't loose interrupts, as the AVR caches them in the int flag
 		RFM12_INT_OFF();
 		
+		
+		
 		//disable receiver
-		rfm12_data(ctrl.pwrmgt_shadow & ~RFM12_PWRMGT_ER);
+		ctrl.pwrmgt_shadow &= ~RFM12_PWRMGT_ER;
 		rfm12_data(ctrl.pwrmgt_shadow);
-
+		
+		ctrl.rfm12_state = STATE_POWER_DOWN;
+		
 		RFM12_INT_ON();
 	}
 	
@@ -304,8 +309,10 @@
 		//we won't loose interrupts, as the AVR caches them in the int flag
 		RFM12_INT_OFF();
 		
+		ctrl.rfm12_state = STATE_RX_IDLE;
+		
 		//enable receiver
-		rfm12_data(ctrl.pwrmgt_shadow | RFM12_PWRMGT_ER);
+		ctrl.pwrmgt_shadow |= RFM12_PWRMGT_ER;
 		rfm12_data(ctrl.pwrmgt_shadow);
 
 		RFM12_INT_ON();

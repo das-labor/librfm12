@@ -37,6 +37,8 @@
 #define STATE_RX_IDLE 0
 #define STATE_RX_ACTIVE 1
 #define STATE_TX 2
+#define STATE_POWER_DOWN 3
+
 
 //packet header length in bytes
 #define PACKET_OVERHEAD 3

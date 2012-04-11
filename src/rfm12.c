@@ -50,7 +50,7 @@
 
 //for uart debugging
 #if RFM12_UART_DEBUG
-	#include "../test-m8/uart.h"
+	#include "../examples/uart_lib/uart.h"
 #endif
 
 #if RFM12_USE_RX_CALLBACK
@@ -355,6 +355,12 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 					//load a dummy byte to clear int status
 					rfm12_data( RFM12_CMD_TX | 0xaa);
 					break;
+					#if RFM12_USE_POWER_CONTROL
+						case STATE_POWER_DOWN:
+							//load a dummy byte to clear int status
+							rfm12_data( RFM12_CMD_TX | 0xaa);
+							break;
+					#endif
 			}//end of switch
 		
 			//set the state machine to idle
