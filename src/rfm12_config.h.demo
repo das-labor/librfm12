@@ -47,7 +47,7 @@
 
 
 /************************
- * PIN DEFINITIONS
+ * RFM12 PIN DEFINITIONS
  */
 
 //Pin that the RFM12's slave select is connected to
@@ -68,11 +68,15 @@
 //correctly, independently of the CS pin used for the RFM12
 
 
+/************************
+ * RFM12 CONFIGURATION OPTIONS
+ */
+
 //baseband of the module (either RFM12_BAND_433, RFM12_BAND_868 or RFM12_BAND_912)
 #define RFM12_BASEBAND RFM12_BAND_433
 
 //center frequency to use (+- FSK frequency shift)
-#define FREQ                  433170000UL
+#define RFM12_FREQUENCY       433170000UL
 
 //Transmit FSK frequency shift in kHz
 #define FSK_SHIFT             125000
@@ -108,10 +112,10 @@
 
 
 /************************
- * INTERRUPT VECTOR
+ * RFM12 INTERRUPT VECTOR
  * set the name for the interrupt vector here
  */
- 
+
 //the interrupt vector
 #define RFM12_INT_VECT (INT1_vect)
 
@@ -136,6 +140,9 @@
  */
 
 #define RFM12_LIVECTRL 0
+#define RFM12_LIVECTRL_CLIENT 0
+#define RFM12_LIVECTRL_HOST 0
+#define RFM12_LIVECTRL_LOAD_SAVE_SETTINGS 0
 #define RFM12_NORETURNS 0
 #define RFM12_NOCOLLISIONDETECTION 0
 #define RFM12_TRANSMIT_ONLY 0
@@ -147,14 +154,13 @@
 #define RFM12_USE_POWER_CONTROL 0
 #define RFM12_LOW_POWER 0
 #define RFM12_USE_CLOCK_OUTPUT 0
+#define RFM12_LOW_BATT_DETECTOR 0
 
 
 #define RFM12_LBD_VOLTAGE             RFM12_LBD_VOLTAGE_3V0
 
 
 #define RFM12_CLOCK_OUT_FREQUENCY     RFM12_CLOCK_OUT_FREQUENCY_1_00_MHz
-
-
 
 /* use a callback function that is called directly from the
  * interrupt routine whenever there is a data packet available. When
@@ -177,7 +183,7 @@
 	#define RX_INIT_HOOK  DDRD |= _BV(PD5)
 	#define RX_LEAVE_HOOK PORTD &= ~_BV(PD5)
 	#define RX_ENTER_HOOK PORTD |= _BV(PD5)
-	
+
 	#define TX_INIT_HOOK  DDRD |= _BV(PD4)
 	#define TX_LEAVE_HOOK PORTD &= ~_BV(PD4)
 	#define TX_ENTER_HOOK PORTD |= _BV(PD4)
@@ -187,5 +193,5 @@
  * UART DEBUGGING
  * en- or disable debugging via uart.
  */
- 
+
 #define RFM12_UART_DEBUG 0
