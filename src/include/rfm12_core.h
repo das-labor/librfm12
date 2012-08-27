@@ -17,7 +17,7 @@
  *
  * @author Peter Fuhrmann, Hans-Gert Dahmen, Soeren Heisrath
  */
- 
+
 #ifndef _RFM12_CORE_H
 #define _RFM12_CORE_H
 
@@ -45,7 +45,7 @@
 
 
 /************************
-* LIBRARY DEFAULT SETTINGS	
+* LIBRARY DEFAULT SETTINGS
  */
 
 
@@ -137,7 +137,7 @@
 			#warning "You are using the RFM12 wakeup timer, but PWRMGT_DEFAULT has the wakeup timer bit unset."
 		#endif
 	#endif
-	
+
 	//enable powermanagement shadowing
 	#define RFM12_PWRMGT_SHADOW 1
 #else
@@ -167,7 +167,7 @@
 #ifndef RFM12_PWRMGT_SHADOW
 	#define RFM12_PWRMGT_SHADOW 0
 #endif
- 
+
 //default value for powermanagement register
 #ifndef PWRMGT_DEFAULT
 	#define PWRMGT_DEFAULT (PWRMGMT_CLCKOUT | PWRMGMT_WKUP | PWRMGMT_LOW_BATT)
@@ -220,11 +220,11 @@
  */
 
 #ifndef RFM12_XTAL_LOAD
-	#define                         RFM12_XTAL_LOAD RFM12_XTAL_11_5PF
+	#define                        RFM12_XTAL_LOAD RFM12_XTAL_11_5PF
 #endif
 
 #ifndef RFM12_POWER
-	#define RFM12_POWER             RFM12_TXCONF_POWER_0
+	#define RFM12_POWER            RFM12_TXCONF_POWER_0
 #endif
 
 #ifndef FSK_SHIFT

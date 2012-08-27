@@ -33,10 +33,10 @@
  *
  */
 
-typedef struct{
+typedef struct {
 	uint16_t rfm12_hw_command;         //actual SPI command for rfm12
 	uint16_t rfm12_hw_parameter_mask;  //mask that selects valid bits for this parameter
-	uint16_t * shadow_register;          //pointer to the shadow register to be used for this command
+	uint16_t *shadow_register;         //pointer to the shadow register to be used for this command
 	uint16_t current_value;
 
 #if RFM12_LIVECTRL_CLIENT
@@ -44,10 +44,10 @@ typedef struct{
 	uint16_t min_val;
 	uint16_t max_val;
 	int16_t  step;
-	char *   name;
-	void (*to_string)(char * str, uint16_t value);
+	char    *name;
+	void (*to_string)(char *str, uint16_t value);
 #endif
-}livectrl_cmd_t;
+} livectrl_cmd_t;
 
 extern livectrl_cmd_t livectrl_cmds[];
 
@@ -71,5 +71,5 @@ void rfm12_save_settings();
 void rfm12_load_settings();
 
 #if RFM12_LIVECTRL_CLIENT
-	void rfm12_livectrl_get_parameter_string(uint8_t cmd, char * str);
+	void rfm12_livectrl_get_parameter_string(uint8_t cmd, char *str);
 #endif

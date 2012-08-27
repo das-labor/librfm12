@@ -29,9 +29,9 @@
  *
  * \note This file is included directly by rfm12.c, for performance reasons.
  */
- 
+
 /******************************************************
- *    THIS FILE IS BEING INCLUDED DIRECTLY		*
+ *	THIS FILE IS BEING INCLUDED DIRECTLY		*
  *		(for performance reasons)				*
  ******************************************************/
 
@@ -49,9 +49,9 @@
 		#define strcpy_P   strcpy
 		#define xsprintf_P sprintf
 	#endif
-		
-	void baseband_to_string(char * s, uint16_t var){
-		switch(var){
+
+	void baseband_to_string(char *s, uint16_t var) {
+		switch (var) {
 			case RFM12_BAND_315:
 				strcpy_P(s, PSTR("315MHz"));
 				break;
@@ -66,12 +66,12 @@
 				break;
 			default:
 				*s = 0;
-				break;			
+				break;
 		}
 	}
-	
-	
-	void frequency_to_string(char * s, uint16_t  val){
+
+
+	void frequency_to_string(char *s, uint16_t val) {
 		//Band [MHz] C1 C2
 		//315         1 31
 		//433         1 43
@@ -79,36 +79,36 @@
 		//915         3 30
 		//f0 = 10 * C1 * (C2 + F/4000) [MHz]
 		//f0 = 10 * C1 * (C2*1000 + F/4)    [kHz]
-		
+
 		//433:
 		//f0 = 430 + F/400  [MHz]
 		//f0 = 430000 + F * 2.5 [kHz]
-		
+
 		//915:
 		//f0 = 900 + F * (3 /400)  [MHz]
 		//f0 = 900000 + F * 7.5 [kHz]
-		
+
 		//868:
 		//f0 = 860 + F * (2 /400)  [MHz]
 		//f0 = 860000 + F * 5 [kHz]
-		
-		
+
+
 		uint16_t mhz;
 		uint16_t khz;
 		uint16_t band_setting = livectrl_cmds[RFM12_LIVECTRL_BASEBAND].current_value;
-	
-		if(band_setting == RFM12_BAND_433){
+
+		if (band_setting == RFM12_BAND_433) {
 			mhz = 430 + val / 400;
 			khz = ((val % 400) * 5) / 2;
-		}else if(band_setting == RFM12_BAND_915){
+		} else if (band_setting == RFM12_BAND_915) {
 			val *= 3;
 			mhz = 900 + val / 400;
 			khz = ((val % 400) * 5) / 2;
-		}else if(band_setting == RFM12_BAND_868){
+		} else if (band_setting == RFM12_BAND_868) {
 			val *= 2;
 			mhz = 860 + val / 400;
 			khz = ((val % 400) * 5) / 2;
-		}else{
+		} else {
 			mhz = 0;
 			khz = 0;
 		}
@@ -118,8 +118,8 @@
 			xsprintf_P(s, PSTR("%3d.%03d MHz"), mhz, khz);
 		#endif
 	}
-	
-	void datarate_to_string(char * s, uint16_t  val){
+
+	void datarate_to_string(char *s, uint16_t val) {
 		/*
 			4. Data Rate Command
 			Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
@@ -128,77 +128,77 @@
 			parameter R (bits r6 to r0) and bit cs.
 			BR = 10000 / 29 / (R+1) / (1+cs*7) [kbps]
 		*/
-		
+
 		uint16_t n;
-		
-		if(val & 0x80){
+
+		if (val & 0x80) {
 			//low bitrate
 			n = 29 * 8;
-		}else{
+		} else {
 			//high bitrate
 			n = 29;
 		}
 		val &= 0x7f;
-		
+
 		n *= val;
-		
+
 		uint32_t bitrate = 10000000ul / n;
-			
-		xsprintf_P(s, PSTR("%4ld bps"), bitrate); 
+
+		xsprintf_P(s, PSTR("%4ld bps"), bitrate);
 	}
-	
-	
+
+
 	#define FULLSCALE_TX_POWER 8;
-	
-	void tx_power_to_string(char * s, uint16_t  var){
+
+	void tx_power_to_string(char *s, uint16_t var) {
 		int16_t val = var;
 		val *= -3;
 		val += FULLSCALE_TX_POWER;
-		
-		xsprintf_P(s, PSTR("%3d dBm"), val); 
+
+		xsprintf_P(s, PSTR("%3d dBm"), val);
 	}
-	
-	void fsk_shift_to_string(char * s, uint16_t  val){
+
+	void fsk_shift_to_string(char *s, uint16_t val) {
 		val >>= 4; //right adjust
-		
-		val = (val + 1)*15;
-		
-		xsprintf_P(s, PSTR("+-%d kHz"), val); 
+
+		val = (val + 1) * 15;
+
+		xsprintf_P(s, PSTR("+-%d kHz"), val);
 	}
-	
-	void lna_to_string(char * s, uint16_t  var){
+
+	void lna_to_string(char *s, uint16_t var) {
 		uint8_t val = var;
 		val >>= 3; //right adjust
-		
-		switch (val){
+
+		switch (val) {
 			case 1: val = 6; break;
 			case 2: val = 14; break;
 			case 3: val = 20; break;
 		}
-		
+
 		xsprintf_P(s, PSTR("%3d dB"), -val);
 	}
-	
-	void rssi_to_string(char * s, uint16_t  val){
-		xsprintf_P(s, PSTR("%4d dBm"), -61 - (7-val) * 6); 
+
+	void rssi_to_string(char *s, uint16_t val) {
+		xsprintf_P(s, PSTR("%4d dBm"), -61 - (7 - val) * 6);
 	}
-		
-	void filter_bw_to_string(char * s, uint16_t  val){
+
+	void filter_bw_to_string(char *s, uint16_t val) {
 		val >>= 5; //right adjust
-		
+
 		val = ((7 - val) * 200) / 3;
-		
-		xsprintf_P(s, PSTR("%3d kHz"), val); 
+
+		xsprintf_P(s, PSTR("%3d kHz"), val);
 	}
-	
-	void xtal_load_to_string(char * s, uint16_t  val){
+
+	void xtal_load_to_string(char *s, uint16_t val) {
 		val += 1;
-		uint8_t pf = val/2 + 8;
+		uint8_t pf = val / 2 + 8;
 		uint8_t n = 0;
 		if(val & 0x01) n = 5;
-		xsprintf_P(s, PSTR("%2d.%dpF"), pf, n); 
+		xsprintf_P(s, PSTR("%2d.%dpF"), pf, n);
 	}
-	
+
 
 	#define IFCLIENT(a,b,c,d,e) a,b,c,d,e
 #else // RFM12_LIVECTRL_CLIENT
@@ -226,79 +226,79 @@ livectrl_cmd_t livectrl_cmds[] = {
 
 #if RFM12_LIVECTRL_LOAD_SAVE_SETTINGS
 	#include <avr/eeprom.h>
-	
-	void rfm12_save_settings(){
-		uint8_t x;	
+
+	void rfm12_save_settings() {
+		uint8_t x;
 		uint16_t checksumm = 0;
-		
-		for(x=0; x < NUM_LIVECTRL_CMDS; x++){
+
+		for (x = 0; x < NUM_LIVECTRL_CMDS; x++) {
 			uint16_t val = livectrl_cmds[x].current_value;
 			checksumm += val;
-			eeprom_write_word((void*)(2*x), val);
+			eeprom_write_word((void*)(2 * x), val);
 		}
-		
-		eeprom_write_word((void*)(2*x), checksumm);
+
+		eeprom_write_word((void*)(2 * x), checksumm);
 	}
-	
-	void rfm12_load_settings(){
-	
+
+	void rfm12_load_settings() {
+
 		uint8_t x;
-		uint16_t val;	
+		uint16_t val;
 		uint16_t checksumm = 0;
-		
-		for(x=0; x < NUM_LIVECTRL_CMDS; x++){
-			val = eeprom_read_word((void*)(2*x));
+
+		for (x = 0; x < NUM_LIVECTRL_CMDS; x++) {
+			val = eeprom_read_word((void*)(2 * x));
 			checksumm += val;
 		}
-		
-		val = eeprom_read_word((void*)(2*x));
-		if( val != checksumm) return; //eeprom invalid, keep default values from array
-	
+
+		val = eeprom_read_word((void*)(2 * x));
+		if (val != checksumm) return; //eeprom invalid, keep default values from array
+
 		//set the settings if eeprom valid
-		for(x=0; x < NUM_LIVECTRL_CMDS; x++){
-			val = eeprom_read_word((void*)(2*x));
+		for (x = 0; x < NUM_LIVECTRL_CMDS; x++) {
+			val = eeprom_read_word((void*)(2 * x));
 			rfm12_livectrl(x, val);
 		}
 	}
 #endif
 
 #if RFM12_LIVECTRL_HOST
-	void rfm12_data_safe(uint16_t d){
+	void rfm12_data_safe(uint16_t d) {
 		//disable the interrupt (as we're working directly with the transceiver now)
 		RFM12_INT_OFF();
 		rfm12_data(d);
 		RFM12_INT_ON();
 	}
-	
-	
-	void rfm12_livectrl(uint8_t cmd, uint16_t value){
-		uint16_t tmp = 0; 
-		livectrl_cmd_t  * livectrl_cmd = &livectrl_cmds[cmd];
-	
+
+
+	void rfm12_livectrl(uint8_t cmd, uint16_t value) {
+		uint16_t tmp = 0;
+		livectrl_cmd_t  *livectrl_cmd = &livectrl_cmds[cmd];
+
 		livectrl_cmd->current_value = value; //update current value
-		
+
 		//the shadow register is somewhat redundant with the current value,
 		//but it makes sense never the less:
 		//the current_value only saves the bits for this one setting (for menu,saving,loding settings)
 		//while the shadow register keeps track of ALL bits the rfm12 has in that register.
 		//the shadow will also be used from rfm12_tick or maybe the interrupt
-		
-		if(livectrl_cmd->shadow_register){
+
+		if (livectrl_cmd->shadow_register) {
 			tmp = *livectrl_cmd->shadow_register;         //load shadow value if any
 			tmp &= ~livectrl_cmd->rfm12_hw_parameter_mask;//clear parameter bits
 		}
 		tmp |= livectrl_cmd->rfm12_hw_command | (livectrl_cmd->rfm12_hw_parameter_mask & value);
-		
+
 		*livectrl_cmd->shadow_register = tmp;
-		
+
 		rfm12_data_safe(tmp);
 	}
 #endif // RFM12_LIVECTRL_HOST
 
 #if RFM12_LIVECTRL_CLIENT
-	void rfm12_livectrl_get_parameter_string(uint8_t cmd, char * str){
-		livectrl_cmd_t  * livectrl_cmd = &livectrl_cmds[cmd];
-		
+	void rfm12_livectrl_get_parameter_string(uint8_t cmd, char *str) {
+		livectrl_cmd_t *livectrl_cmd = &livectrl_cmds[cmd];
+
 		uint16_t var = livectrl_cmd->current_value;
 		livectrl_cmd->to_string(str, var);
 	}

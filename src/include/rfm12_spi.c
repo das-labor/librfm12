@@ -19,7 +19,7 @@
  */
 
 /******************************************************
- *    THIS FILE IS BEING INCLUDED DIRECTLY		*
+ *	THIS FILE IS BEING INCLUDED DIRECTLY		*
  *		(for performance reasons)				*
  ******************************************************/
 
@@ -32,22 +32,21 @@
 /* @description Actual sending function to send raw data to the Module
  * @note do NOT call this function directly, unless you know what you're doing.
  */
-static uint8_t spi_data(uint8_t c)
-{
-	uint8_t x, d=d;
-	for(x=0;x<8;x++){
-		if(c & 0x80){
+static uint8_t spi_data(uint8_t c) {
+	uint8_t x, d = d;
+	for (x = 0; x < 8; x++) {
+		if (c & 0x80) {
 			PORT_MOSI |= (1<<BIT_MOSI);
-		}else{
+		} else {
 			PORT_MOSI &= ~(1<<BIT_MOSI);
 		}
 		PORT_SCK |= (1<<BIT_SCK);
-		d<<=1;
-		if(PIN_MISO & (1<<BIT_MISO)){
-			d|=1;
+		d <<= 1;
+		if (PIN_MISO & (1<<BIT_MISO)) {
+			d |= 1;
 		}
 		PORT_SCK &= ~(1<<BIT_SCK);
-		c<<=1;
+		c <<= 1;
 	}
 	return d;
 }
@@ -56,18 +55,17 @@ static uint8_t spi_data(uint8_t c)
 
 //non-inlined version of rfm12_data
 //warning: without the attribute, gcc will inline this even if -Os is set
-static void __attribute__ ((noinline)) rfm12_data(uint16_t d)
-{
+static void __attribute__ ((noinline)) rfm12_data(uint16_t d) {
 	SS_ASSERT();
 	#if !(RFM12_SPI_SOFTWARE)
-		SPDR = d>>8;
-		while(!(SPSR & (1<<SPIF)));
-	
+		SPDR = d >> 8;
+		while (!(SPSR & (1<<SPIF)));
+
 		SPDR = d & 0xff;
-		while(!(SPSR & (1<<SPIF)));
+		while (!(SPSR & (1<<SPIF)));
 	#else
-		spi_data(d >> 8   );
-		spi_data(d &  0xff);
+		spi_data(d >> 8);
+		spi_data(d & 0xff);
 	#endif
 	SS_RELEASE();
 }
@@ -75,22 +73,21 @@ static void __attribute__ ((noinline)) rfm12_data(uint16_t d)
 
 //non-inlined version of rfm12_read
 //warning: without the attribute, gcc will inline this even if -Os is set
-static uint16_t __attribute__ ((noinline)) rfm12_read(uint16_t c)
-{
+static uint16_t __attribute__ ((noinline)) rfm12_read(uint16_t c) {
 	uint16_t retval;
 	SS_ASSERT();
 
 	#if !(RFM12_SPI_SOFTWARE)
-		SPDR = c>>8;
-		while(!(SPSR & (1<<SPIF)));
-		retval = SPDR<<8;
+		SPDR = c >> 8;
+		while (!(SPSR & (1<<SPIF)));
+		retval = SPDR << 8;
 		SPDR = c & 0xff;
-		while(!(SPSR & (1<<SPIF)));
+		while (!(SPSR & (1<<SPIF)));
 		retval |= SPDR;
 	#else
-		retval =  spi_data(c >> 8   );
+		retval = spi_data(c >> 8);
 		retval <<= 8;
-		retval |= spi_data(c &  0xff);
+		retval |= spi_data(c & 0xff);
 	#endif
 	SS_RELEASE();
 	return retval;
@@ -100,23 +97,22 @@ static uint16_t __attribute__ ((noinline)) rfm12_read(uint16_t c)
 /* @description reads the upper 8 bits of the status
  * register (the interrupt flags)
  */
-static uint8_t rfm12_read_int_flags_inline()
-{
+static uint8_t rfm12_read_int_flags_inline() {
 	#if !(RFM12_SPI_SOFTWARE)
 		SS_ASSERT();
 		SPDR = 0;
-		while(!(SPSR & (1<<SPIF)));
+		while (!(SPSR & (1<<SPIF)));
 		SS_RELEASE();
 		return SPDR;
 	#else
 		SS_ASSERT();
-		unsigned char x, d=d;
+		unsigned char x, d = d;
 		PORT_MOSI &= ~(1<<BIT_MOSI);
-		for(x=0;x<8;x++){
+		for (x = 0; x < 8; x++) {
 			PORT_SCK |= (1<<BIT_SCK);
-			d<<=1;
-			if(PIN_MISO & (1<<BIT_MISO)){
-				d|=1;
+			d <<= 1;
+			if (PIN_MISO & (1<<BIT_MISO)) {
+				d |= 1;
 			}
 			PORT_SCK &= ~(1<<BIT_SCK);
 		}
@@ -125,19 +121,17 @@ static uint8_t rfm12_read_int_flags_inline()
 	#endif
 }
 
-
-static void spi_init()
-{
-	DDR_MOSI   |= (_BV(BIT_MOSI));
-	DDR_SCK    |= (_BV(BIT_SCK));
+static void spi_init() {
+	DDR_MOSI |= (_BV(BIT_MOSI));
+	DDR_SCK  |= (_BV(BIT_SCK));
 	#if !(RFM12_SPI_SOFTWARE)
-		PORT_SPI   |= (_BV(BIT_SPI_SS));
-		DDR_SPI    |= (_BV(BIT_SPI_SS));
+		PORT_SPI |= (_BV(BIT_SPI_SS));
+		DDR_SPI  |= (_BV(BIT_SPI_SS));
 	#endif
 
-	DDR_MISO   &= ~(_BV(BIT_MISO));
+	DDR_MISO &= ~(_BV(BIT_MISO));
 
 	#if !(RFM12_SPI_SOFTWARE)
-		SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);//SPI Master, clk/16
+		SPCR = (1<<SPE) | (1<<MSTR) | (1<<SPR0); //SPI Master, clk/16
 	#endif
 }

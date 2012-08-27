@@ -17,7 +17,7 @@
  *
  * @author Peter Fuhrmann, Hans-Gert Dahmen, Soeren Heisrath
  */
- 
+
 /** \file rfm12.h
  * \brief rfm12 library main header
  * \author Hans-Gert Dahmen
@@ -121,11 +121,10 @@ void rfm12_poll(void);
 *
 * \see rfm12_start_tx(), rfm12_tx() and rf_tx_buffer
 */
-typedef struct
-{
+typedef struct {
 	//! Sync bytes for receiver to start filling fifo.
 	uint8_t sync[2];
-	
+
 	//! Length byte - number of bytes in buffer.
 	uint8_t len;
 
@@ -148,8 +147,7 @@ typedef struct
 	*
 	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_buffer() , rfm12_rx_clear() and rf_rx_buffers
 	*/
-	typedef struct
-	{
+	typedef struct {
 		//! Indicates if the buffer is free or completed.
 		/** \see \ref rxtx_states "States for rx and tx buffers" */
 		volatile uint8_t status;
@@ -177,8 +175,7 @@ typedef struct
 * \note Some states are defined in the non-documented rfm12_core.h header file.
 * \see ISR(RFM12_INT_VECT, ISR_NOBLOCK), rfm12_tick() and ctrl
 */
-typedef struct
-{
+typedef struct {
 	//! This controls the library internal state machine.
 	volatile uint8_t rfm12_state;
 
@@ -215,14 +212,14 @@ typedef struct
 		*/
 		volatile uint8_t low_batt;
 	#endif /* RFM12_LOW_BATT_DETECTOR */
-	
+
 	#if RFM12_USE_WAKEUP_TIMER
 		//! Wakeup timer flag.
 		/** The wakeup timer feature sets this flag from the interrupt on it's ticks */
 		volatile uint8_t wkup_flag;
 	#endif
-	
-	
+
+
 	#if RFM12_LIVECTRL
 		uint16_t rxctrl_shadow;
 		uint16_t afc_shadow;
@@ -259,8 +256,7 @@ extern rfm12_control_t ctrl;
 	/** \returns STATUS_FREE or STATUS_COMPLETE
 	* \see \ref rxtx_states "rx buffer states", rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
-	static inline uint8_t rfm12_rx_status(void)
-	{
+	static inline uint8_t rfm12_rx_status(void) {
 		return rf_rx_buffers[ctrl.buffer_out_num].status;
 	}
 
@@ -268,8 +264,7 @@ extern rfm12_control_t ctrl;
 	/** \returns The length of the data inside the buffer
 	* \see rfm12_rx_status(), rfm12_rx_type(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
-	static inline uint8_t rfm12_rx_len(void)
-	{
+	static inline uint8_t rfm12_rx_len(void) {
 		return rf_rx_buffers[ctrl.buffer_out_num].len;
 	}
 
@@ -277,8 +272,7 @@ extern rfm12_control_t ctrl;
 	/** \returns The packet type from the packet header type field
 	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
-	static inline uint8_t rfm12_rx_type(void)
-	{
+	static inline uint8_t rfm12_rx_type(void) {
 		return rf_rx_buffers[ctrl.buffer_out_num].type;
 	}
 
@@ -286,8 +280,7 @@ extern rfm12_control_t ctrl;
 	/** \returns A pointer to the current receive buffer contents
 	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
-	static inline uint8_t *rfm12_rx_buffer(void)
-	{
+	static inline uint8_t *rfm12_rx_buffer(void) {
 		return (uint8_t*) rf_rx_buffers[ctrl.buffer_out_num].buffer;
 	}
 #endif /* !(RFM12_TRANSMIT_ONLY) */

@@ -17,7 +17,7 @@
  *
  * @author Peter Fuhrmann, Hans-Gert Dahmen, Soeren Heisrath
  */
- 
+
 /** \file rfm12_extra.c
  * \brief rfm12 library extra features source
  * \author Hans-Gert Dahmen
@@ -30,14 +30,14 @@
  *
  * \note This file is included directly by rfm12.c, for performance reasons.
  */
- 
+
 /******************************************************
- *    THIS FILE IS BEING INCLUDED DIRECTLY		*
+ *	THIS FILE IS BEING INCLUDED DIRECTLY		*
  *		(for performance reasons)				*
  ******************************************************/
 
 #include <stdlib.h>
- 
+
 /************************
  * amplitude modulation receive mode
 */
@@ -53,7 +53,7 @@
 	*/
 	rfm12_rfrxbuf_t ask_rxbuf;
 
-	
+
 	//! ASK mode ADC interrupt.
 	/** This interrupt function directly measures the receive signal strength
 	* on an analog output pin of the rf12 ic.
@@ -63,73 +63,61 @@
 	* \note You need to define RFM12_RECEIVE_ASK as 1 to enable this.
 	* \see adc_init() and rfm12_rfrxbuf_t
 	*/
-	ISR(ADC_vect, ISR_NOBLOCK)
-	{
+	ISR(ADC_vect, ISR_NOBLOCK) {
 		static uint16_t adc_average;
-		static uint8_t pulse_timer;	
-		uint8_t    value;
+		static uint8_t pulse_timer;
+		uint8_t value;
 		static uint8_t oldvalue;
 		static uint8_t ignore;
 		uint16_t adc;
-		
 
-		
+
 		ADCSRA = (1<<ADEN) | (1<<ADFR) | (0<<ADIE) //start free running mode
 				| (1<<ADPS2) | (1<<ADPS1);  //preescaler to clk/64
 											//samplerate = 16MHz/(64*13) = 19231 Hz
 
-		
+
 		adc = ADC;
-		
-		adc_average -= adc_average/64;
+
+		adc_average -= adc_average / 64;
 		adc_average +=adc;
-		
-		value = (ADC > ((adc_average/64)+50) )?1:0;
-		
-		if(value)
-		{
+
+		value = (ADC > ((adc_average / 64) + 50)) ? 1 : 0;
+
+		if (value) {
 			PORTD |= (1<<PD7);
-		}else
-		{
+		} else {
 			PORTD &= ~(1<<PD7);
 		}
 
 
-		if(TCNT0 > 0xE0){
+		if (TCNT0 > 0xE0) {
 			ignore = 0;
 		}
-		
-		if(ask_rxbuf.state == RFM12_ASK_STATE_EMPTY)
-		{
-			if(value && (!ignore) )
-			{
+
+		if (ask_rxbuf.state == RFM12_ASK_STATE_EMPTY) {
+			if (value && (!ignore)) {
 				//pulse_timer = 0;
 				TCNT0 = 0;
-				ask_rxbuf.p   = 0;
+				ask_rxbuf.p = 0;
 				ask_rxbuf.state = RFM12_ASK_STATE_RECEIVING;
 			}
-		}else if(ask_rxbuf.state == RFM12_ASK_STATE_FULL)
-		{
-			if(value)
-			{
+		} else if (ask_rxbuf.state == RFM12_ASK_STATE_FULL) {
+			if (value) {
 				TCNT0 = 0;
 				ignore = 1;
 			}
-			
-		}else if(ask_rxbuf.state == RFM12_ASK_STATE_RECEIVING)
-		{
-			if(value != oldvalue)
-			{
+
+		} else if (ask_rxbuf.state == RFM12_ASK_STATE_RECEIVING) {
+			if (value != oldvalue) {
 
 				ask_rxbuf.buf[ask_rxbuf.p] = TCNT0;
 				TCNT0 = 0;
 				//pulse_timer = 0;
-				if(ask_rxbuf.p != (RFM12_ASK_RFRXBUF_SIZE-1) )
-				{
+				if (ask_rxbuf.p != (RFM12_ASK_RFRXBUF_SIZE - 1) ) {
 					ask_rxbuf.p++;
 				}
-			}else if(TCNT0 > 0xe0)
-			{
+			} else if (TCNT0 > 0xe0) {
 				//if( !value ){
 				//PORTD |= (1<<PD6);
 					ask_rxbuf.state = RFM12_ASK_STATE_FULL;
@@ -145,10 +133,9 @@
 				| (1<<ADPS2) | (1<<ADPS1);  //preescaler to clk/64
 											//samplerate = 16MHz/(64*13) = 19231 Hz
 
-
 	}
 
-	
+
 	//! ASK mode ADC interrupt setup.
 	/** This will setup the ADC interrupt to receive ASK modulated signals.
 	* rfm12_init() calls this function automatically if ASK receive mode is enabled.
@@ -156,14 +143,13 @@
 	* \note You need to define RFM12_RECEIVE_ASK as 1 to enable this.
 	* \see ISR(ADC_vect, ISR_NOBLOCK) and rfm12_rfrxbuf_t
 	*/
-	void adc_init(void)
-	{
+	void adc_init(void) {
 		ADMUX  = (1<<REFS0) | (1<<REFS1); //Internal 2.56V Reference, MUX0
-		
+
 		ADCSRA = (1<<ADEN) | (1<<ADSC) | (1<<ADFR) | (1<<ADIE) //start free running mode
 				| (1<<ADPS2) | (1<<ADPS1);  //preescaler to clk/64
 											//samplerate = 16MHz/(64*13) = 19231 Hz
-		
+
 	}
 #endif /* RFM12_RECEIVE_ASK */
 
@@ -184,8 +170,7 @@
 	* \todo Use power management shadow register if the wakeup timer feature is enabled.
 	* \see rfm12_tx_on() and rfm12_tx_off()
 	*/
-	void rfm12_ask_tx_mode(uint8_t setting)
-	{
+	void rfm12_ask_tx_mode(uint8_t setting) {
 		if (setting)
 		{
 		#if 0
@@ -206,8 +191,8 @@
 			ctrl.rfm12_state = STATE_RX_IDLE;
 		}
 	}
-	
-	
+
+
 	//! Enable the transmitter immediately (ASK transmission mode).
 	/** This will send out the current buffer contents.
 	* This function is used to emulate amplitude modulated signals.
@@ -217,13 +202,12 @@
 	* \todo Use power management shadow register if the wakeup timer feature is enabled.
 	* \see rfm12_tx_off() and rfm12_ask_tx_mode()
 	*/
-	inline void rfm12_tx_on(void)
-	{
+	inline void rfm12_tx_on(void) {
 		/* set enable transmission bit now. */
 		rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT | RFM12_PWRMGT_ET | RFM12_PWRMGT_ES | RFM12_PWRMGT_EX);
 	}
-	
-	
+
+
 	//! Set default power mode (usually transmitter off, receiver on).
 	/** This will usually stop a transmission.
 	* This function is used to emulate amplitude modulated signals.
@@ -233,8 +217,7 @@
 	* \todo Use power management shadow register if the wakeup timer feature is enabled.
 	* \see rfm12_tx_on() and rfm12_ask_tx_mode()
 	*/
-	inline void rfm12_tx_off(void)
-	{
+	inline void rfm12_tx_off(void) {
 		/* turn off everything. */
 		rfm12_data(RFM12_CMD_PWRMGT);
 	}
@@ -250,19 +233,18 @@
 	/** \param [val]  The wakeup timer period value to be passed to the rf12. \n
 	* See the rf12 datasheet for valid values.
 	*/
-	void rfm12_set_wakeup_timer(uint16_t val)
-	{
+	void rfm12_set_wakeup_timer(uint16_t val) {
 		//disable the interrupt (as we're working directly with the transceiver now)
 		//we won't loose interrupts, as the AVR caches them in the int flag
 		RFM12_INT_OFF();
-		
+
 		//set wakeup timer
 		rfm12_data (RFM12_CMD_WAKEUP | (val & 0x1FFF));
-	
+
 		//restart the wakeup timer by toggling the bit on and off
 		rfm12_data(ctrl.pwrmgt_shadow & ~RFM12_PWRMGT_EW);
 		rfm12_data(ctrl.pwrmgt_shadow);
-		
+
 		RFM12_INT_ON();
 	}
 #endif /* RFM12_USE_WAKEUP_TIMER */
@@ -276,41 +258,39 @@
 	//! This function powers down the rfm12 modules receiver to save power.
 	/**
 	 * It can not receive in that state.
-	 */	 	
-	void rfm12_power_down(){
+	 */
+	void rfm12_power_down() {
 		//wait for rfm12 to get to state STATE_RX_IDLE
 		//before turning of the receiver.
 		//reason: this way transmissions that have been triggered before
 		//can be completed before we power down the rfm12.
 
-		while(ctrl.rfm12_state != STATE_RX_IDLE);
-	
+		while (ctrl.rfm12_state != STATE_RX_IDLE);
+
 		//disable the interrupt (as we're working directly with the transceiver now)
 		//we won't loose interrupts, as the AVR caches them in the int flag
 		RFM12_INT_OFF();
-		
-		
-		
+
 		//disable receiver
 		ctrl.pwrmgt_shadow &= ~RFM12_PWRMGT_ER;
 		rfm12_data(ctrl.pwrmgt_shadow);
-		
+
 		ctrl.rfm12_state = STATE_POWER_DOWN;
-		
+
 		RFM12_INT_ON();
 	}
-	
+
 	//! This function powers the rfm12 modules receiver back up again
 	/**
 	 * Should only be called after rfm12_power_down()
-	 */	 	
-	void rfm12_power_up(){
+	 */
+	void rfm12_power_up() {
 		//disable the interrupt (as we're working directly with the transceiver now)
 		//we won't loose interrupts, as the AVR caches them in the int flag
 		RFM12_INT_OFF();
-		
+
 		ctrl.rfm12_state = STATE_RX_IDLE;
-		
+
 		//enable receiver
 		ctrl.pwrmgt_shadow |= RFM12_PWRMGT_ER;
 		rfm12_data(ctrl.pwrmgt_shadow);
@@ -330,24 +310,22 @@
 	* See the rf12 datasheet for valid values.
 	* \see rfm12_get_batt_status()
 	*/
-	void rfm12_set_batt_detector(uint16_t val)
-	{	
+	void rfm12_set_batt_detector(uint16_t val) {
 		//disable the interrupt (as we're working directly with the transceiver now)
 		//we won't loose interrupts, as the AVR caches them in the int flag
 		RFM12_INT_OFF();
-		
+
 		//set the low battery detector and microcontroller clock divider register
 		rfm12_data (RFM12_CMD_LBDMCD | (val & 0x01FF));
-		
+
 		RFM12_INT_ON();
 	}
-	
+
 	//! Return the current low battery detector status.
 	/** \returns One of these \ref batt_states "battery states" .
 	* \see rfm12_set_batt_detector() and the \ref batt_states "battery state" defines
 	*/
-	uint8_t rfm12_get_batt_status(void)
-	{
+	uint8_t rfm12_get_batt_status(void) {
 		return ctrl.low_batt;
 	}
 #endif /* RFM12_LOW_BATT_DETECTOR */
