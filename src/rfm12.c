@@ -645,7 +645,7 @@ rfm12_start_tx(uint8_t type, uint8_t length) {
 //set TX Power, frequency shift
 #define RFM12_CMD_TXCONF_DEFAULT  (RFM12_CMD_TXCONF | RFM12_POWER | RFM12_TXCONF_FS_CALC(FSK_SHIFT) )
 
-const uint16_t init_cmds[] PROGMEM = {
+static const uint16_t init_cmds[] PROGMEM = {
 	//defined above (so shadow register is inited with same value)
 	RFM12_CMD_CFG_DEFAULT,
 

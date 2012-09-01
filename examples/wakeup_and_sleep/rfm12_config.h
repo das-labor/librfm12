@@ -59,17 +59,20 @@
 #define RFM12_NORETURNS 0
 #define RFM12_NOCOLLISIONDETECTION 0
 #define RFM12_TRANSMIT_ONLY 0
+#define RFM12_SPI_SOFTWARE 0
 #define RFM12_USE_POLLING 0
 #define RFM12_RECEIVE_ASK 0
 #define RFM12_TRANSMIT_ASK 0
 #define RFM12_USE_WAKEUP_TIMER 1
 #define RFM12_USE_POWER_CONTROL 1
 #define RFM12_LOW_POWER 0
+#define RFM12_USE_CLOCK_OUTPUT 0
 
 
 #define RFM12_LBD_VOLTAGE             RFM12_LBD_VOLTAGE_3V0
 
 
+#define RFM12_CLOCK_OUT_FREQUENCY     RFM12_CLOCK_OUT_FREQUENCY_1_00_MHz
 
 /* use a callback function that is called directly from the
  * interrupt routine whenever there is a data packet available. When
@@ -92,7 +95,7 @@
 	#define RX_INIT_HOOK  DDRA |= _BV(PA1)
 	#define RX_LEAVE_HOOK PORTA &= ~_BV(PA1)
 	#define RX_ENTER_HOOK PORTA |= _BV(PA1)
-	
+
 	#define TX_INIT_HOOK  DDRA |= _BV(PA2)
 	#define TX_LEAVE_HOOK PORTA &= ~_BV(PA2)
 	#define TX_ENTER_HOOK PORTA |= _BV(PA2)
@@ -102,5 +105,5 @@
  * UART DEBUGGING
  * en- or disable debugging via uart.
  */
- 
+
 #define RFM12_UART_DEBUG 0
