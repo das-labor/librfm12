@@ -52,7 +52,7 @@ void transmit_packets(){
 
 		terminal_push_cursor();
 
-		terminal_set_cursor_to_line_and_clear(11);
+		terminal_set_cursor_to_line_and_clear(14);
 
 		count++;
 		xprintf_P(PSTR("TX %3d"), count);
