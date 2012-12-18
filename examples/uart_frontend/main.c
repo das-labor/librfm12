@@ -45,8 +45,10 @@ void transmit_packets(){
 	static uint16_t count;
 
 	ticker++;
-	if ((ticker == 5000 ))
+	//if ((ticker == 5000 ))
+	if(do_transmit)
 	{
+		do_transmit = 0;
 		ticker = 0;
 		rfm12_tx (sizeof(tv), 0, tv);
 

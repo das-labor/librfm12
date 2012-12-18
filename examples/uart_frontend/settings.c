@@ -12,6 +12,7 @@
 #include "../../src/xprintf/xprintf.h"
 
 
+uint8_t do_transmit;
 
 static void show_parameter(uint8_t cmd){
 	char s[16];
@@ -114,6 +115,9 @@ void handle_settings_menu(){
 					break;
 				case KEY_EXIT:
 					return;
+					break;
+				case 't':
+					do_transmit = 1;
 					break;
 			}
 		}
