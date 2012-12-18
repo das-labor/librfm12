@@ -267,7 +267,8 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 							if (ctrl.bytecount == 2 && checksum != 0xff) {
 								//if the checksum does not match, reset the fifo
 								break;
-#endif						}
+							}
+#endif
 
 							//increment bytecount
 							ctrl.bytecount++;
