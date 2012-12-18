@@ -262,12 +262,12 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 								//hackhack: begin writing to struct at offsetof len
 								(& rf_rx_buffers[ctrl.buffer_in_num].len)[ctrl.bytecount] = data;
 							}
-
+#ifndef DISABLE_CHECKSUMM
 							//check header against checksum
 							if (ctrl.bytecount == 2 && checksum != 0xff) {
 								//if the checksum does not match, reset the fifo
 								break;
-							}
+#endif						}
 
 							//increment bytecount
 							ctrl.bytecount++;
