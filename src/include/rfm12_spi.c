@@ -97,7 +97,7 @@ static uint16_t __attribute__ ((noinline)) rfm12_read(uint16_t c) {
 /* @description reads the upper 8 bits of the status
  * register (the interrupt flags)
  */
-static uint8_t rfm12_read_int_flags_inline() {
+static uint8_t rfm12_read_int_flags_inline(void) {
 	#if !(RFM12_SPI_SOFTWARE)
 		SS_ASSERT();
 		SPDR = 0;
@@ -121,7 +121,7 @@ static uint8_t rfm12_read_int_flags_inline() {
 	#endif
 }
 
-static void spi_init() {
+static void spi_init(void) {
 	DDR_MOSI |= (_BV(BIT_MOSI));
 	DDR_SCK  |= (_BV(BIT_SCK));
 	#if !(RFM12_SPI_SOFTWARE)
