@@ -34,10 +34,14 @@
 /************************
  * standard includes
 */
+#ifdef __PLATFORM_AVR__
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <string.h>
 #include <avr/pgmspace.h>
+#endif
+
+#include <string.h>
+
 
 
 /************************
@@ -85,6 +89,7 @@ rfm12_control_t ctrl;
 
 /* include spi functions into here */
 #include "include/rfm12_spi.c"
+#include "include/rfm12_spi_linux.c"
 
 /*
  * include control / init functions into here
@@ -142,7 +147,9 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 
 	do {
 		//clear AVR int flag
+#ifdef __PLATFORM_AVR__
 		RFM12_INT_FLAG = (1<<RFM12_FLAG_BIT);
+#endif
 
 		//first we read the first byte of the status register
 		//to get the interrupt flags
@@ -646,7 +653,11 @@ rfm12_start_tx(uint8_t type, uint8_t length) {
 //set TX Power, frequency shift
 #define RFM12_CMD_TXCONF_DEFAULT  (RFM12_CMD_TXCONF | RFM12_POWER | RFM12_TXCONF_FS_CALC(FSK_SHIFT) )
 
+#ifdef __PLATFORM_AVR__
 static const uint16_t init_cmds[] PROGMEM = {
+#else
+static const uint16_t init_cmds[] = {
+#endif
 	//defined above (so shadow register is inited with same value)
 	RFM12_CMD_CFG_DEFAULT,
 
@@ -708,8 +719,10 @@ static const uint16_t init_cmds[] PROGMEM = {
 */
 void rfm12_init(void) {
 	//initialize spi
+#ifdef __PLATFORM_AVR__
 	SS_RELEASE();
 	DDR_SS |= (1<<BIT_SS);
+#endif
 	spi_init();
 
 	//typically sets DDR registers for RFM12BP TX/RX pin
@@ -756,9 +769,17 @@ void rfm12_init(void) {
 
 	//write all the initialisation values to rfm12
 	uint8_t x;
-	for (x = 0; x < ( sizeof(init_cmds) / 2) ; x++) {
-		rfm12_data(pgm_read_word(&init_cmds[x]));
-	}
+
+	#ifdef __PLATFORM_AVR__
+
+		for (x = 0; x < ( sizeof(init_cmds) / 2) ; x++) {
+			rfm12_data(pgm_read_word(&init_cmds[x]));
+		}
+	#else
+		for (x = 0; x < ( sizeof(init_cmds) / 2) ; x++) {
+			rfm12_data(init_cmds[x]);
+		}
+	#endif
 
 	#ifdef RX_ENTER_HOOK
 		RX_ENTER_HOOK;
@@ -774,11 +795,16 @@ void rfm12_init(void) {
 	#endif
 
 	//setup interrupt for falling edge trigger
+#ifdef __PLATFORM_AVR__
 	RFM12_INT_SETUP();
+#endif
 
 	//clear int flag
 	rfm12_read(RFM12_CMD_STATUS);
+
+#ifdef __PLATFORM_AVR__
 	RFM12_INT_FLAG = (1<<RFM12_FLAG_BIT);
+#endif
 
 	//init receiver fifo, we now begin receiving.
 	rfm12_data(CLEAR_FIFO);
