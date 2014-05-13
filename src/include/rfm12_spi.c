@@ -27,6 +27,7 @@
 #define SS_ASSERT() PORT_SS &= ~(1<<BIT_SS)
 #define SS_RELEASE() PORT_SS |= (1<<BIT_SS)
 
+#ifdef __PLATFORM_AVR__
 
 #if RFM12_SPI_SOFTWARE
 /* @description Actual sending function to send raw data to the Module
@@ -135,3 +136,5 @@ static void spi_init(void) {
 		SPCR = (1<<SPE) | (1<<MSTR) | (1<<SPR0); //SPI Master, clk/16
 	#endif
 }
+
+#endif

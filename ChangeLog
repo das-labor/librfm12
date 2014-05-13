@@ -1,3 +1,9 @@
+2014-05-10
+------------------------------------------------------------------------
+
+Added initial Linux SPI implementation to use the library on a
+Raspberry Pi or other Linux based SPI-capable platforms.
+
 ------------------------------------------------------------------------
 
 2012-01-28
@@ -5,7 +11,7 @@
 * included rfm12_read_interrupt_flags_inline() again for performance
   reasons (interrupt handler might be to slow on 115200 Baud otherwise)
 * clear interrupt flag before checking status (there is a glitch sometimes
-  while the int line goes high, which triggers another interrupt otherweise,
+  while the int line goes high, which triggers another interrupt otherwise,
   which also hurts performance
 * LNA controllable over rfm12_livectrl
 
