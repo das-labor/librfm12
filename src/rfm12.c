@@ -95,7 +95,6 @@ rfm12_control_t ctrl;
  * include control / init functions into here
  * all of the stuff in there is optional, so there's no code-bloat.
 */
-#define RFM12_LIVECTRL_HOST 1//if we are buliding for the microcontroller, we are the host.
 #include "include/rfm12_livectrl.c"
 
 /*
