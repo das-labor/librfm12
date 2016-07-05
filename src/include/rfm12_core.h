@@ -22,7 +22,7 @@
 #define _RFM12_CORE_H
 
 /************************
-* VARIOUS RFM RELATED DEFINES FOR INTERNAL USE	
+* VARIOUS RFM RELATED DEFINES FOR INTERNAL USE
 *(defines which shall be visible to the user are located in rfm12.h)
 */
 
@@ -107,7 +107,7 @@
 	//define PWRMGMT_LOW_BATT  with low batt detector
 	//it will be used later
 	#define PWRMGMT_LOW_BATT (RFM12_PWRMGT_EB)
-	
+
 	//check if the default power management setting has the LB bit set
 	//and warn the user if it's not
 	#ifdef PWRMGT_DEFAULT
@@ -129,7 +129,7 @@
 	//define PWRMGMT_LOW_BATT  with low batt detector
 	//it will be used later
 	#define PWRMGMT_WKUP (RFM12_PWRMGT_EW)
-	
+
 	//check if the default power management setting has the EW bit set
 	//and warn the user if it's not
 	#ifdef PWRMGT_DEFAULT
@@ -143,6 +143,12 @@
 #else
 	#define PWRMGMT_WKUP 0
 #endif /* RFM12_USE_WAKEUP_TIMER */
+
+#if RFM12_USE_POWER_CONTROL
+	#ifdef RFM12_PWRMGT_SHADOW
+		#define RFM12_PWRMGT_SHADOW 1
+	#endif
+#endif
 
 //if ASK tx is not defined, we won't use this feature
 #ifndef RFM12_TRANSMIT_ASK
