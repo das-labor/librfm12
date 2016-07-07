@@ -34,7 +34,7 @@
  * @note do NOT call this function directly, unless you know what you're doing.
  */
 static uint8_t spi_data(uint8_t c) {
-	uint8_t x, d = d;
+	uint8_t x, d = 0;
 	for (x = 0; x < 8; x++) {
 		if (c & 0x80) {
 			PORT_MOSI |= (1<<BIT_MOSI);
@@ -107,7 +107,7 @@ static uint8_t rfm12_read_int_flags_inline(void) {
 		return SPDR;
 	#else
 		SS_ASSERT();
-		unsigned char x, d = d;
+		unsigned char x, d = 0;
 		PORT_MOSI &= ~(1<<BIT_MOSI);
 		for (x = 0; x < 8; x++) {
 			PORT_SCK |= (1<<BIT_SCK);

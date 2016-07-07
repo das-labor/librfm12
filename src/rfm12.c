@@ -1,5 +1,5 @@
 /**** RFM 12 library for Atmel AVR Microcontrollers *******
- * 
+ *
  * This software is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation; either version 2 of the License,
@@ -95,7 +95,6 @@ rfm12_control_t ctrl;
  * include control / init functions into here
  * all of the stuff in there is optional, so there's no code-bloat.
 */
-#define RFM12_LIVECTRL_HOST 1//if we are buliding for the microcontroller, we are the host.
 #include "include/rfm12_livectrl.c"
 
 /*
@@ -115,11 +114,11 @@ rfm12_control_t ctrl;
 * microcontroller - by pulling the nIRQ pin low - on the following events:
 * - The TX register is ready to receive the next byte (RGIT)
 * - The FIFO has received the preprogrammed amount of bits (FFIT)
-* - Power-on reset (POR) 
-* - FIFO overflow (FFOV) / TX register underrun (RGUR) 
-* - Wake-up timer timeout (WKUP) 
-* - Negative pulse on the interrupt input pin nINT (EXT) 
-* - Supply voltage below the preprogrammed value is detected (LBD) 
+* - Power-on reset (POR)
+* - FIFO overflow (FFOV) / TX register underrun (RGUR)
+* - Wake-up timer timeout (WKUP)
+* - Negative pulse on the interrupt input pin nINT (EXT)
+* - Supply voltage below the preprogrammed value is detected (LBD)
 *
 * The rfm12 status register is read to determine which event has occured.
 * Reading the status register will clear the event flags.
@@ -214,10 +213,14 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 						//read the length byte,  and write it to the checksum
 						//remember, the first byte is the length byte
 						data = rfm12_read(RFM12_CMD_READ);
-						checksum = data;
+						#ifdef CALCULATE_NUM_BYTES_FROM_PACKET_START
+							ctrl.num_bytes = CALCULATE_NUM_BYTES_FROM_PACKET_START(data);
+						#else
+							checksum = data;
 
-						//add the packet overhead and store it into a working variable
-						ctrl.num_bytes = data + PACKET_OVERHEAD;
+							//add the packet overhead and store it into a working variable
+							ctrl.num_bytes = data + PACKET_OVERHEAD;
+						#endif
 
 						//debug
 						#if RFM12_UART_DEBUG >= 2
@@ -234,7 +237,12 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 							//store the received length into the packet buffer
 							//this length field will be used by application reading the
 							//buffer.
-							rf_rx_buffers[ctrl.buffer_in_num].len = data;
+							#ifdef CALCULATE_NUM_BYTES_FROM_PACKET_START
+								rf_rx_buffers[ctrl.buffer_in_num].len = ctrl.num_bytes;
+								rf_rx_buffers[ctrl.buffer_in_num].buffer[0] = data;
+							#else
+								rf_rx_buffers[ctrl.buffer_in_num].len = data;
+							#endif
 
 							//end the interrupt without resetting the fifo
 							goto no_fifo_reset;
@@ -260,22 +268,28 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 								uart_putc(data);
 							#endif
 
-							//xor the remaining bytes onto the checksum
-							//note: only the header will be effectively checked
-							checksum ^= data;
+							#ifdef CALCULATE_NUM_BYTES_FROM_PACKET_START
+								if (ctrl.bytecount < RFM12_RX_BUFFER_SIZE) {
+									rf_rx_buffers[ctrl.buffer_in_num].buffer[ctrl.bytecount] = data;
+								}
+							#else
+								//xor the remaining bytes onto the checksum
+								//note: only the header will be effectively checked
+								checksum ^= data;
 
-							//put next byte into buffer, if there is enough space
-							if (ctrl.bytecount < (RFM12_RX_BUFFER_SIZE + 3)) {
-								//hackhack: begin writing to struct at offsetof len
-								(& rf_rx_buffers[ctrl.buffer_in_num].len)[ctrl.bytecount] = data;
-							}
-#ifndef DISABLE_CHECKSUMM
-							//check header against checksum
-							if (ctrl.bytecount == 2 && checksum != 0xff) {
-								//if the checksum does not match, reset the fifo
-								break;
-							}
-#endif
+								//put next byte into buffer, if there is enough space
+								if (ctrl.bytecount < (RFM12_RX_BUFFER_SIZE + 3)) {
+									//hackhack: begin writing to struct at offsetof len
+									(& rf_rx_buffers[ctrl.buffer_in_num].len)[ctrl.bytecount] = data;
+								}
+								#ifndef DISABLE_CHECKSUMM
+									//check header against checksum
+									if (ctrl.bytecount == 2 && checksum != 0xff) {
+										//if the checksum does not match, reset the fifo
+										break;
+									}
+								#endif
+							#endif
 
 							//increment bytecount
 							ctrl.bytecount++;
@@ -505,8 +519,14 @@ void rfm12_tick(void) {
 		#endif
 
 		//calculate number of bytes to be sent by ISR
-		//2 sync bytes + len byte + type byte + checksum + message length + 1 dummy byte
-		ctrl.num_bytes = rf_tx_buffer.len + 6;
+		#ifdef CALCULATE_NUM_BYTES_FROM_PACKET_START
+			// payload's first byte is stored in len, while its length is calculated,
+			// in total it's: 2 sync bytes + calculated message length + 1 dummy byte
+			ctrl.num_bytes = CALCULATE_NUM_BYTES_FROM_PACKET_START(rf_tx_buffer.len) + 3;
+		#else
+			//2 sync bytes + len byte + type byte + checksum + message length + 1 dummy byte
+			ctrl.num_bytes = rf_tx_buffer.len + 6;
+		#endif
 
 		//reset byte sent counter
 		ctrl.bytecount = 0;
@@ -563,10 +583,12 @@ rfm12_start_tx(uint8_t type, uint8_t length) {
 	if (ctrl.txstate != STATUS_FREE)
 		return TXRETURN(RFM12_TX_OCCUPIED);
 
-	//write airlab header to buffer
-	rf_tx_buffer.len = length;
-	rf_tx_buffer.type = type;
-	rf_tx_buffer.checksum = length ^ type ^ 0xff;
+	#ifndef CALCULATE_NUM_BYTES_FROM_PACKET_START
+		//write airlab header to buffer
+		rf_tx_buffer.len = length;
+		rf_tx_buffer.type = type;
+		rf_tx_buffer.checksum = length ^ type ^ 0xff;
+	#endif
 
 	//schedule packet for transmission
 	ctrl.txstate = STATUS_OCCUPIED;
@@ -582,7 +604,7 @@ rfm12_start_tx(uint8_t type, uint8_t length) {
 * which is the case when the packet data does not change while the packet is enqueued
 * for transmission, then one could directly store the data in \ref rf_tx_buffer
 * (see rf_tx_buffer_t) and use the rfm12_start_tx() function.
-* 
+*
 * \note Note that this function does not start the transmission, it merely enqueues the packet. \n
 * Transmissions are started by rfm12_tick().
 * \param [len] The packet data length
@@ -608,7 +630,11 @@ rfm12_start_tx(uint8_t type, uint8_t length) {
 		if (ctrl.txstate != STATUS_FREE)
 			return TXRETURN(RFM12_TX_OCCUPIED);
 
-		memcpy(rf_tx_buffer.buffer, data, len);
+		#ifdef CALCULATE_NUM_BYTES_FROM_PACKET_START
+			memcpy(&rf_tx_buffer.len, data, len);
+		#else
+			memcpy(rf_tx_buffer.buffer, data, len);
+		#endif
 
 		#if (!(RFM12_NORETURNS))
 		return rfm12_start_tx(type, len);
@@ -675,6 +701,10 @@ static const uint16_t init_cmds[] = {
 	//defined above (so shadow register is inited with same value)
 	RFM12_CMD_RXCTRL_DEFAULT,
 
+  // byte used by hardware to recognize beginning of packets that
+  // we want to receive
+  RFM12_CMD_SYNCPATTERN | SYNC_LSB,
+
 	//automatic clock lock control(AL), digital Filter(!S),
 	//Data quality detector value 3, slow clock recovery lock
 	(RFM12_CMD_DATAFILTER | RFM12_DATAFILTER_AL | 3),
@@ -738,7 +768,11 @@ void rfm12_init(void) {
 	//the sync pattern is used by the receiver to distinguish noise from real transmissions
 	//the sync pattern is hardcoded into the receiver
 	rf_tx_buffer.sync[0] = SYNC_MSB;
-	rf_tx_buffer.sync[1] = SYNC_LSB;
+	#ifdef TX_SYNC_LSB
+		rf_tx_buffer.sync[1] = TX_SYNC_LSB;
+	#else
+		rf_tx_buffer.sync[1] = SYNC_LSB;
+	#endif
 
 	//if receive mode is not disabled (default)
 	#if !(RFM12_TRANSMIT_ONLY)
