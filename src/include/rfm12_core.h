@@ -31,7 +31,9 @@
 
 //default synchronization pattern
 #define SYNC_MSB 0x2D
-#define SYNC_LSB 0xD4
+#ifndef SYNC_LSB
+	#define SYNC_LSB 0xD4
+#endif
 
 //these are the states for the receive/transmit state machine
 #define STATE_RX_IDLE 0

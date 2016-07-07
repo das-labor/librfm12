@@ -701,6 +701,10 @@ static const uint16_t init_cmds[] = {
 	//defined above (so shadow register is inited with same value)
 	RFM12_CMD_RXCTRL_DEFAULT,
 
+  // byte used by hardware to recognize beginning of packets that
+  // we want to receive
+  RFM12_CMD_SYNCPATTERN | SYNC_LSB,
+
 	//automatic clock lock control(AL), digital Filter(!S),
 	//Data quality detector value 3, slow clock recovery lock
 	(RFM12_CMD_DATAFILTER | RFM12_DATAFILTER_AL | 3),
@@ -764,7 +768,11 @@ void rfm12_init(void) {
 	//the sync pattern is used by the receiver to distinguish noise from real transmissions
 	//the sync pattern is hardcoded into the receiver
 	rf_tx_buffer.sync[0] = SYNC_MSB;
-	rf_tx_buffer.sync[1] = SYNC_LSB;
+	#ifdef TX_SYNC_LSB
+		rf_tx_buffer.sync[1] = TX_SYNC_LSB;
+	#else
+		rf_tx_buffer.sync[1] = SYNC_LSB;
+	#endif
 
 	//if receive mode is not disabled (default)
 	#if !(RFM12_TRANSMIT_ONLY)
