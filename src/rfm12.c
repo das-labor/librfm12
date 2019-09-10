@@ -49,6 +49,7 @@
  * the order in which they are included is important
 */
 #include "include/rfm12_hw.h"
+#include "include/rfm12_defaults.h"
 #include "include/rfm12_core.h"
 #include "rfm12.h"
 
@@ -115,11 +116,11 @@ rfm12_control_t ctrl;
 * microcontroller - by pulling the nIRQ pin low - on the following events:
 * - The TX register is ready to receive the next byte (RGIT)
 * - The FIFO has received the preprogrammed amount of bits (FFIT)
-* - Power-on reset (POR) 
-* - FIFO overflow (FFOV) / TX register underrun (RGUR) 
-* - Wake-up timer timeout (WKUP) 
-* - Negative pulse on the interrupt input pin nINT (EXT) 
-* - Supply voltage below the preprogrammed value is detected (LBD) 
+* - Power-on reset (POR)
+* - FIFO overflow (FFOV) / TX register underrun (RGUR)
+* - Wake-up timer timeout (WKUP)
+* - Negative pulse on the interrupt input pin nINT (EXT)
+* - Supply voltage below the preprogrammed value is detected (LBD)
 *
 * The rfm12 status register is read to determine which event has occured.
 * Reading the status register will clear the event flags.

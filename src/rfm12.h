@@ -45,6 +45,7 @@
 #endif
 
 //this was missing, but is very important to set the config options for structs and such
+#include "include/rfm12_defaults.h"
 #include "include/rfm12_core.h"
 
 /** \name States for rx and tx buffers
