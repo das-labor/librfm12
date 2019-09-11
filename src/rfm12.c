@@ -161,18 +161,14 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 		//the first one.
 		recheck_interrupt = 0;
 
-		#if RFM12_UART_DEBUG >= 2
-			uart_putc('S');
-			uart_putc(status);
-		#endif
+        UART_DEBUG_PUTC('S');
+        UART_DEBUG_PUTC(status);
 
 		//low battery detector feature
 		#if RFM12_LOW_BATT_DETECTOR
 			if (status & (RFM12_STATUS_LBD >> 8)) {
 				//debug
-				#if RFM12_UART_DEBUG >= 2
-					uart_putc('L');
-				#endif
+                UART_DEBUG_PUTC('L');
 
 				//set status variable to low battery
 				ctrl.low_batt = RFM12_BATT_LOW;
@@ -184,9 +180,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 		#if RFM12_USE_WAKEUP_TIMER
 			if (status & (RFM12_STATUS_WKUP >> 8)) {
 				//debug
-				#if RFM12_UART_DEBUG >= 2
-					uart_putc('W');
-				#endif
+                UART_DEBUG_PUTC('W');
 
 				ctrl.wkup_flag = 1;
 				recheck_interrupt = 1;
@@ -221,10 +215,8 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 						ctrl.num_bytes = data + PACKET_OVERHEAD;
 
 						//debug
-						#if RFM12_UART_DEBUG >= 2
-							uart_putc('I');
-							uart_putc(data);
-						#endif
+                        UART_DEBUG_PUTC('I');
+                        UART_DEBUG_PUTC(data);
 
 						//see whether our buffer is free
 						//FIXME: put this into global statekeeping struct, the free state can be set by the function which pulls the packet, i guess
@@ -256,10 +248,8 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 						//check if transmission is complete
 						if (ctrl.bytecount < ctrl.num_bytes) {
 							//debug
-							#if RFM12_UART_DEBUG >= 2
-								uart_putc('R');
-								uart_putc(data);
-							#endif
+                            UART_DEBUG_PUTC('R');
+                            UART_DEBUG_PUTC(data);
 
 							//xor the remaining bytes onto the checksum
 							//note: only the header will be effectively checked
@@ -289,9 +279,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 						/* the fifo will be reset at the end of the function */
 
 						//debug
-						#if RFM12_UART_DEBUG >= 2
-							uart_putc('D');
-						#endif
+                        UART_DEBUG_PUTC('D');
 
 						//indicate that the buffer is ready to be used
 						rf_rx_buffers[ctrl.buffer_in_num].status = STATUS_COMPLETE;
@@ -313,9 +301,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 
 				case STATE_TX:
 					//debug
-					#if RFM12_UART_DEBUG >= 2
-						uart_putc('T');
-					#endif
+                    UART_DEBUG_PUTC('T');
 
 					if (ctrl.bytecount < ctrl.num_bytes) {
 						//load the next byte from our buffer struct.
@@ -367,9 +353,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 
 			//reset the receiver fifo, if receive mode is not disabled (default)
 			#if !(RFM12_TRANSMIT_ONLY)
-				#if RFM12_UART_DEBUG >= 2
-					uart_putc('F');
-				#endif
+                UART_DEBUG_PUTC('F');
 				rfm12_data( RFM12_CMD_FIFORESET | CLEAR_FIFO_INLINE);
 				rfm12_data( RFM12_CMD_FIFORESET | ACCEPT_DATA_INLINE);
 			#endif /* !(RFM12_TRANSMIT_ONLY) */
@@ -380,9 +364,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 		}
 	} while (recheck_interrupt);
 
-	#if RFM12_UART_DEBUG >= 2
-		uart_putc('E');
-	#endif
+    UART_DEBUG_PUTC('E');
 
 	//turn the int back on
 	RFM12_INT_ON();

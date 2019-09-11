@@ -115,6 +115,11 @@ uint8_t rfm12_tx(uint8_t len, uint8_t type, uint8_t *data);
 void rfm12_poll(void);
 #endif
 
+#if RFM12_UART_DEBUG >= 2
+#define UART_DEBUG_PUTC(x) uart_putc((x))
+#else
+#define UART_DEBUG_PUTC(x) (x)
+#endif
 
 /************************
  * private control structs
