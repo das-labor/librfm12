@@ -47,10 +47,10 @@
 #define SYNC_LSB 0xD4
 
 //these are the states for the receive/transmit state machine
-#define STATE_RX_IDLE 0
-#define STATE_RX_ACTIVE 1
-#define STATE_TX 2
-#define STATE_POWER_DOWN 3
+// Was individual define statements STATE_POWER_DOWN Was = 2
+typedef enum{
+STATE_RX_IDLE, STATE_RX_ACTIVE, STATE_TX, STATE_TX_END, STATE_TX_RESET, STATE_POWER_DOWN
+} radio_state;
 
 
 //packet header length in bytes

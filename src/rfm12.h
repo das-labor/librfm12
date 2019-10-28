@@ -43,8 +43,14 @@
 #ifdef __PLATFORM_LINUX__
 #include <stdint.h>
 #endif
+#ifdef __PLATFORM_AVR__
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <avr/pgmspace.h>
+#endif
 
-//this was missing, but is very important to set the config options for structs and such
+
+//It is very important to set the config options for structs and such
 #include "include/rfm12_defaults.h"
 #include "include/rfm12_core.h"
 
@@ -118,19 +124,56 @@ void rfm12_poll(void);
 #if RFM12_UART_DEBUG >= 2
 #define UART_DEBUG_PUTC(x) uart_putc((x))
 #else
-#define UART_DEBUG_PUTC(x) (x)
+#define UART_DEBUG_PUTC(x)
 #endif
 
 /************************
  * private control structs
  */
 
+//! The communication buffer structure.
+/** \note Note that this complete buffer is transmitted sequentially,
+* beginning with the sync bytes.
+*/
+//	+-------------trx_format--------------+
+//	|             BUFFER              |sta|
+//	|len|typ |chk  |                  |   |
+//	|   |    |sum  |.... payload ...  |tus|
+//	+-------------------------------------+
+
+/** \note This type is a union of a structure
+* The structure allows access to the data
+* by member access. The array allows access to
+* the same data but with indexes.
+* The Union is then embedded in another struct
+* allowing access to the status property.
+* \see rfm12_start_tx(), rfm12_tx() and rf_tx_buffer
+* \link https://stackoverflow.com/a/26361366/3343553
+*/
+typedef struct{
+    union{
+        struct{
+            	//! Length byte - number of bytes in buffer.
+            char len;
+                	//! Type field for the simple airlab protocol.
+            char type;
+                	//! Checksum over the former two members.
+            char checksum;
+                	//! Payload of raw bytes to be transmitted.
+            char payload[RFM12_TRX_FRAME_SIZE];
+        };
+        char buffer[RFM12_TRX_FRAME_SIZE + RFM12_TRX_OVERHEAD];
+    };
+    //! Status of either STATUS_FREE or STATUS_OCCUPIED
+    buff_state status;
+} rf_trx_buffer_t;
 //! The transmission buffer structure.
 /** \note Note that this complete buffer is transmitted sequentially,
 * beginning with the sync bytes.
 *
 * \see rfm12_start_tx(), rfm12_tx() and rf_tx_buffer
 */
+
 typedef struct {
 	//! Sync bytes for receiver to start filling fifo.
 	uint8_t sync[2];
@@ -250,6 +293,7 @@ extern rf_tx_buffer_t rf_tx_buffer;
 #if !(RFM12_TRANSMIT_ONLY)
 	//buffers for storing incoming transmissions
 	extern rf_rx_buffer_t rf_rx_buffers[2];
+	extern rf_trx_buffer_t rf_rx_new_buffers[2];
 #endif /* !(RFM12_TRANSMIT_ONLY) */
 
 //the control struct

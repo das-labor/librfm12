@@ -77,6 +77,7 @@ rf_tx_buffer_t rf_tx_buffer;
 #if !(RFM12_TRANSMIT_ONLY)
 	//! Buffers and status to receive packets.
 	rf_rx_buffer_t rf_rx_buffers[2];
+	rf_trx_buffer_t rf_rx_new_buffers[2];
 #endif /* RFM12_TRANSMIT_ONLY */
 
 //! Global control and status.
@@ -140,13 +141,16 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 {
 	RFM12_INT_OFF();
 	uint8_t status;
-	uint8_t recheck_interrupt;
+	uint8_t recheck_interrupt  = 1;
 	//if receive mode is not disabled (default)
 	#if !(RFM12_TRANSMIT_ONLY)
 		static uint8_t checksum; //static local variables produce smaller code size than globals
 	#endif /* !(RFM12_TRANSMIT_ONLY) */
 
-	do {
+	//if we use at least one of the status bits, we need to check the status again
+	//for the case in which another interrupt condition occured *while* we were handeling
+	//the first one.
+	while(recheck_interrupt){
 		//clear AVR int flag
 #ifdef __PLATFORM_AVR__
 		RFM12_INT_FLAG = (1<<RFM12_FLAG_BIT);
@@ -156,10 +160,10 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 		//to get the interrupt flags
 		status = rfm12_read_int_flags_inline();
 
-		//if we use at least one of the status bits, we need to check the status again
-		//for the case in which another interrupt condition occured while we were handeling
-		//the first one.
-		recheck_interrupt = 0;
+		// This is set for any interrupt handled in this ISR
+		// It will cause it to recheck before exiting the function
+		recheck_interrupt = status &
+				(RFM12_STATUS_LBD | RFM12_STATUS_WKUP | RFM12_STATUS_FFIT) >> 8;
 
         UART_DEBUG_PUTC('S');
         UART_DEBUG_PUTC(status);
@@ -172,7 +176,6 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 
 				//set status variable to low battery
 				ctrl.low_batt = RFM12_BATT_LOW;
-				recheck_interrupt = 1;
 			}
 		#endif /* RFM12_LOW_BATT_DETECTOR */
 
@@ -183,7 +186,6 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
                 UART_DEBUG_PUTC('W');
 
 				ctrl.wkup_flag = 1;
-				recheck_interrupt = 1;
 			}
 			if (status & ((RFM12_STATUS_WKUP | RFM12_STATUS_FFIT) >> 8) ) {
 				//restart the wakeup timer by toggling the bit on and off
@@ -194,9 +196,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 
 		//check if the fifo interrupt occurred
 		if (status & (RFM12_STATUS_FFIT>>8)) {
-			//yes
-			recheck_interrupt = 1;
-			//see what we have to do (start rx, rx or tx)
+			uint8_t checksum_fail = 0;
 			switch (ctrl.rfm12_state) {
 				case STATE_RX_IDLE: {
 					//if receive mode is not disabled (default)
@@ -261,11 +261,15 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 								(& rf_rx_buffers[ctrl.buffer_in_num].len)[ctrl.bytecount] = data;
 							}
 #ifndef DISABLE_CHECKSUMM
-							//check header against checksum
 							if (ctrl.bytecount == 2 && checksum != 0xff) {
 								//if the checksum does not match, reset the fifo
 								break;
 							}
+				//check header against checksum
+				if (ctrl.bytecount == 2 && checksum != 0xff) {
+					//if the checksum does not match, reset the fifo
+					checksum_fail = 1;
+				}
 #endif
 
 							//increment bytecount
@@ -362,7 +366,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 			no_fifo_reset:
 			b = b;
 		}
-	} while (recheck_interrupt);
+	}
 
     UART_DEBUG_PUTC('E');
 
