@@ -59,12 +59,9 @@
 * \see rfm12_rx_status() and rfm12_control_t
 * @{
 */
-//! Indicates that the buffer is free
-#define STATUS_FREE 0
-//! Indicates that the buffer is in use by the library
-#define STATUS_OCCUPIED 1
-//! Indicates that a receive buffer holds a complete transmission
-#define STATUS_COMPLETE 2
+typedef enum{
+    STATUS_FREE, STATUS_OCCUPIED//,STATUS_COMPLETE?
+} buff_state;
 //@}
 
 
@@ -311,7 +308,7 @@ extern rfm12_control_t ctrl;
 	* \see \ref rxtx_states "rx buffer states", rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
 	static inline uint8_t rfm12_rx_status(void) {
-		return rf_rx_buffers[ctrl.buffer_out_num].status;
+		return rf_rx_new_buffers[ctrl.buffer_out_num].status;
 	}
 
 	//! Inline function to return the rx buffer length field.
@@ -319,7 +316,7 @@ extern rfm12_control_t ctrl;
 	* \see rfm12_rx_status(), rfm12_rx_type(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
 	static inline uint8_t rfm12_rx_len(void) {
-		return rf_rx_buffers[ctrl.buffer_out_num].len;
+		return rf_rx_new_buffers[ctrl.buffer_out_num].len;
 	}
 
 	//! Inline function to return the rx buffer type field.
@@ -327,7 +324,7 @@ extern rfm12_control_t ctrl;
 	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
 	static inline uint8_t rfm12_rx_type(void) {
-		return rf_rx_buffers[ctrl.buffer_out_num].type;
+		return rf_rx_new_buffers[ctrl.buffer_out_num].type;
 	}
 
 	//! Inline function to retreive current rf buffer contents.
@@ -335,7 +332,7 @@ extern rfm12_control_t ctrl;
 	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
 	static inline uint8_t *rfm12_rx_buffer(void) {
-		return (uint8_t*) rf_rx_buffers[ctrl.buffer_out_num].buffer;
+		return (uint8_t*) rf_rx_new_buffers[ctrl.buffer_out_num].buffer;
 	}
 #endif /* !(RFM12_TRANSMIT_ONLY) */
 
