@@ -54,7 +54,7 @@ STATE_RX_IDLE, STATE_RX_ACTIVE, STATE_TX, STATE_TX_END, STATE_TX_RESET, STATE_PO
 
 
 //packet header length in bytes
-#define PACKET_OVERHEAD 3
+#define RFM12_TRX_OVERHEAD 3
 
 /************************
 * HELPER MACROS

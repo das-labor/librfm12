@@ -206,7 +206,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 			case STATE_RX_ACTIVE:
 #ifndef DISABLE_CHECKSUMM
 				//check header against checksum
-				if (ctrl.bytecount == 2 && checksum != 0xff) {
+				if (ctrl.bytecount == 3 && checksum != 0xff) {
 					//if the checksum does not match, reset the fifo
 					checksum_fail = 1;
 				}
@@ -228,7 +228,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 				break;
 			case STATE_TX:
 				ctrl.rfm12_state = STATE_TX_END;
-				if (ctrl.bytecount < ctrl.num_bytes) {
+				if (ctrl.bytecount < ctrl.num_bytes && ctrl.bytecount <RFM12_TX_BUFFER_SIZE+6) {
 					//Stay in TX mode if there are more bytes to TX
 					ctrl.rfm12_state = STATE_TX;
 				}
@@ -250,15 +250,23 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 				checksum ^= data;
 
 				//debug
-        UART_DEBUG_PUTC('R');
-        UART_DEBUG_PUTC(data);
+				UART_DEBUG_PUTC('R');
+				UART_DEBUG_PUTC(data);
 
 				//Write the byte into the receive data structure with overflow check
-				if (ctrl.bytecount < (RFM12_RX_BUFFER_SIZE + 3)) {
+				if (ctrl.bytecount == 0){
+					//Specially check length byte on write
+					if(data>RFM12_TRX_FRAME_SIZE + RFM12_TRX_OVERHEAD){
+						rf_rx_new_buffers[ctrl.buffer_in_num].len=RFM12_TRX_FRAME_SIZE + RFM12_TRX_OVERHEAD;
+					}
+					else{
+						rf_rx_new_buffers[ctrl.buffer_in_num].len = data;
+					}
+				}
+				else{
 					rf_rx_new_buffers[ctrl.buffer_in_num].buffer[ctrl.bytecount] = data;
 				}
 				ctrl.bytecount++;
-
 				//Check to see if bytecount pos is at the length, if so, finished
 				if(rf_rx_new_buffers[ctrl.buffer_in_num].len <= ctrl.bytecount){
 					/* if we're here, receiving is done */
@@ -358,7 +366,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 * This function also fills the rfm12 tx fifo with a preamble.
 *
 * \warning Warning, if you do not call this function periodically, then no packet will get transmitted.
-* \see rfm12_tx() and rfm12_start_tx()
+* \see rfm12_tx() and rfm12_queue_tx()
 */
 void rfm12_tick(void) {
 	//collision detection is enabled by default
@@ -439,64 +447,67 @@ void rfm12_tick(void) {
 
 	//do we have something to transmit?
 	if (ctrl.txstate == STATUS_OCCUPIED) { //yes: start transmitting
-		//disable the interrupt (as we're working directly with the transceiver now)
-		//we won't loose interrupts, as the AVR caches them in the int flag.
-		//we could disturb an ongoing reception,
-		//if it has just started some cpu cycles ago
-		//(as the check for this case is some lines (cpu cycles) above)
-		//anyhow, we MUST transmit at some point...
-		RFM12_INT_OFF();
-
-		//disable receiver - if you don't do this, tx packets will get lost
-		//as the fifo seems to be in use by the receiver
-
-		#if RFM12_PWRMGT_SHADOW
-			ctrl.pwrmgt_shadow &= ~(RFM12_PWRMGT_ER); /* disable receiver */
-			rfm12_data(ctrl.pwrmgt_shadow);
-		#else
-			rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT ); /* disable receiver */
-		#endif
-
-		//RFM12BP receiver off
-		#ifdef RX_LEAVE_HOOK
-			RX_LEAVE_HOOK;
-		#endif
-
-		//calculate number of bytes to be sent by ISR
-		//2 sync bytes + len byte + type byte + checksum + message length + 1 dummy byte
-		ctrl.num_bytes = rf_tx_buffer.len + 6;
-
-		//reset byte sent counter
-		ctrl.bytecount = 0;
-
-		//set mode for interrupt handler
-		ctrl.rfm12_state = STATE_TX;
-
-		//RFM12BP transmitter on
-		#ifdef TX_ENTER_HOOK
-			TX_ENTER_HOOK;
-		#endif
-
-		//fill 2byte 0xAA preamble into data register
-		//the preamble helps the receivers AFC circuit to lock onto the exact frequency
-		//(hint: the tx FIFO [if el is enabled] is two staged, so we can safely write 2 bytes before starting)
-		rfm12_data(RFM12_CMD_TX | PREAMBLE);
-		rfm12_data(RFM12_CMD_TX | PREAMBLE);
-
-		//set ET in power register to enable transmission (hint: TX starts now)
-		#if RFM12_PWRMGT_SHADOW
-			ctrl.pwrmgt_shadow |= RFM12_PWRMGT_ET;
-			rfm12_data (ctrl.pwrmgt_shadow);
-		#else
-			rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT | RFM12_PWRMGT_ET);
-		#endif
-
-		//enable the interrupt to continue the transmission
-		RFM12_INT_ON();
+		rfm12_start_tx();
 	}
 }
 
+//! Start the buffered packet transmission
+void rfm12_start_tx() {
+	//disable the interrupt (as we're working directly with the transceiver now)
+	//we won't loose interrupts, as the AVR caches them in the int flag.
+	//we could disturb an ongoing reception,
+	//if it has just started some cpu cycles ago
+	//(as the check for this case is some lines (cpu cycles) above)
+	//anyhow, we MUST transmit at some point...
+	RFM12_INT_OFF();
 
+	//disable receiver - if you don't do this, tx packets will get lost
+	//as the fifo seems to be in use by the receiver
+
+	#if RFM12_PWRMGT_SHADOW
+		ctrl.pwrmgt_shadow &= ~(RFM12_PWRMGT_ER); /* disable receiver */
+		rfm12_data(ctrl.pwrmgt_shadow);
+	#else
+		rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT ); /* disable receiver */
+	#endif
+
+	//RFM12BP receiver off
+	#ifdef RX_LEAVE_HOOK
+		RX_LEAVE_HOOK;
+	#endif
+
+	//calculate number of bytes to be sent by ISR
+	//2 sync bytes + header_overhead + message length
+	ctrl.num_bytes =  2 + RFM12_TRX_OVERHEAD + rf_tx_buffer.len;
+
+	//reset byte sent counter
+	ctrl.bytecount = 0;
+
+	//set mode for interrupt handler
+	ctrl.rfm12_state = STATE_TX;
+
+	//RFM12BP transmitter on
+	#ifdef TX_ENTER_HOOK
+		TX_ENTER_HOOK;
+	#endif
+
+	//fill 2byte 0xAA preamble into data register
+	//the preamble helps the receivers AFC circuit to lock onto the exact frequency
+	//(hint: the tx FIFO [if el is enabled] is two staged, so we can safely write 2 bytes before starting)
+	rfm12_data(RFM12_CMD_TX | PREAMBLE);
+	rfm12_data(RFM12_CMD_TX | PREAMBLE);
+
+	//set ET in power register to enable transmission (hint: TX starts now)
+	#if RFM12_PWRMGT_SHADOW
+		ctrl.pwrmgt_shadow |= RFM12_PWRMGT_ET;
+		rfm12_data (ctrl.pwrmgt_shadow);
+	#else
+		rfm12_data(RFM12_CMD_PWRMGT | PWRMGT_DEFAULT | RFM12_PWRMGT_ET);
+	#endif
+
+	//enable the interrupt to continue the transmission
+	RFM12_INT_ON();
+}
 //! Enqueue an already buffered packet for transmission
 /** If there is no active transmission, the packet header is written to the
 * transmission control buffer and the packet will be enqueued for transmission. \n
@@ -516,7 +527,7 @@ void
 #else
 uint8_t
 #endif
-rfm12_start_tx(uint8_t type, uint8_t length) {
+rfm12_queue_tx(uint8_t type, uint8_t length) {
 	//exit if the buffer isn't free
 	if (ctrl.txstate != STATUS_FREE)
 		return TXRETURN(RFM12_TX_OCCUPIED);
@@ -533,14 +544,14 @@ rfm12_start_tx(uint8_t type, uint8_t length) {
 }
 
 
-//! Copy a packet to the buffer and call rfm12_start_tx() to enqueue it for transmission.
+//! Copy a packet to the buffer and call rfm12_queue_tx() to enqueue it for transmission.
 /** If there is no active transmission, the buffer contents will be copied to the
 * internal transmission buffer. Finally the buffered packet is going to be enqueued by
-* calling rfm12_start_tx(). If automatic buffering of packet data is not necessary,
+* calling rfm12_queue_tx(). If automatic buffering of packet data is not necessary,
 * which is the case when the packet data does not change while the packet is enqueued
 * for transmission, then one could directly store the data in \ref rf_tx_buffer
-* (see rf_tx_buffer_t) and use the rfm12_start_tx() function.
-* 
+* (see rf_tx_buffer_t) and use the rfm12_queue_tx() function.
+*
 * \note Note that this function does not start the transmission, it merely enqueues the packet. \n
 * Transmissions are started by rfm12_tick().
 * \param [len] The packet data length
@@ -569,9 +580,9 @@ rfm12_start_tx(uint8_t type, uint8_t length) {
 		memcpy(rf_tx_buffer.buffer, data, len);
 
 		#if (!(RFM12_NORETURNS))
-		return rfm12_start_tx(type, len);
+		return rfm12_queue_tx(type, len);
 		#else
-		rfm12_start_tx(type, len);
+		rfm12_queue_tx(type, len);
 		#endif
 	}
 #endif /* RFM12_SMALLAPI */
@@ -588,7 +599,7 @@ rfm12_start_tx(uint8_t type, uint8_t length) {
 	//warning: without the attribute, gcc will inline this even if -Os is set
 	void __attribute__((noinline)) rfm12_rx_clear(void) {
 			//mark the current buffer as empty
-			rf_rx_buffers[ctrl.buffer_out_num].status = STATUS_FREE;
+			rf_rx_new_buffers[ctrl.buffer_out_num].status = STATUS_FREE;
 
 			//switch to the other buffer
 			ctrl.buffer_out_num ^= 1;

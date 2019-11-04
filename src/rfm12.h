@@ -65,9 +65,9 @@ typedef enum{
 //@}
 
 
-/** \name  Return values for rfm12_tx() and rfm12_start_tx()
+/** \name  Return values for rfm12_tx() and rfm12_queue_tx()
 * \anchor tx_retvals
-* \see rfm12_tx() and rfm12_start_tx()
+* \see rfm12_tx() and rfm12_queue_tx()
 * @{
 */
 //!  The packet data is longer than the internal buffer
@@ -100,14 +100,16 @@ void rfm12_set_callback ((*in_func)(uint8_t, uint8_t *));
 //FIXME: the tx function should return a status, do we need to do this also?
 // uint8_t rfm12_tx_status();
 
+void rfm12_start_tx();
+
 #if (RFM12_NORETURNS)
 //see rfm12.c for more documentation
-void rfm12_start_tx(uint8_t type, uint8_t length);
+void rfm12_queue_tx(uint8_t type, uint8_t length);
 #if !(RFM12_SMALLAPI)
 void rfm12_tx(uint8_t len, uint8_t type, uint8_t *data);
 #endif
 #else
-uint8_t rfm12_start_tx(uint8_t type, uint8_t length);
+uint8_t rfm12_queue_tx(uint8_t type, uint8_t length);
 #if !(RFM12_SMALLAPI)
 uint8_t rfm12_tx(uint8_t len, uint8_t type, uint8_t *data);
 #endif
@@ -144,7 +146,7 @@ void rfm12_poll(void);
 * the same data but with indexes.
 * The Union is then embedded in another struct
 * allowing access to the status property.
-* \see rfm12_start_tx(), rfm12_tx() and rf_tx_buffer
+* \see rfm12_queue_tx(), rfm12_tx() and rf_tx_buffer
 * \link https://stackoverflow.com/a/26361366/3343553
 */
 typedef struct{
@@ -168,7 +170,7 @@ typedef struct{
 /** \note Note that this complete buffer is transmitted sequentially,
 * beginning with the sync bytes.
 *
-* \see rfm12_start_tx(), rfm12_tx() and rf_tx_buffer
+* \see rfm12_queue_tx(), rfm12_tx() and rf_tx_buffer
 */
 
 typedef struct {
@@ -331,8 +333,15 @@ extern rfm12_control_t ctrl;
 	/** \returns A pointer to the current receive buffer contents
 	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
-	static inline uint8_t *rfm12_rx_buffer(void) {
+	static inline uint8_t *rfm12_rx_entire(void) {
 		return (uint8_t*) rf_rx_new_buffers[ctrl.buffer_out_num].buffer;
+	}
+	//! Inline function to retreive current rf buffer contents.
+	/** \returns A pointer to the current receive payload contents
+	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_clear() and rf_rx_buffer_t
+	*/
+	static inline uint8_t *rfm12_rx_buffer(void) {
+		return (uint8_t*) rf_rx_new_buffers[ctrl.buffer_out_num].payload;
 	}
 #endif /* !(RFM12_TRANSMIT_ONLY) */
 
