@@ -43,8 +43,14 @@
 #ifdef __PLATFORM_LINUX__
 #include <stdint.h>
 #endif
+#ifdef __PLATFORM_AVR__
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <avr/pgmspace.h>
+#endif
 
-//this was missing, but is very important to set the config options for structs and such
+
+//It is very important to set the config options for structs and such
 #include "include/rfm12_defaults.h"
 #include "include/rfm12_core.h"
 
@@ -53,18 +59,15 @@
 * \see rfm12_rx_status() and rfm12_control_t
 * @{
 */
-//! Indicates that the buffer is free
-#define STATUS_FREE 0
-//! Indicates that the buffer is in use by the library
-#define STATUS_OCCUPIED 1
-//! Indicates that a receive buffer holds a complete transmission
-#define STATUS_COMPLETE 2
+typedef enum{
+    STATUS_FREE, STATUS_OCCUPIED//,STATUS_COMPLETE?
+} buff_state;
 //@}
 
 
-/** \name  Return values for rfm12_tx() and rfm12_start_tx()
+/** \name  Return values for rfm12_tx() and rfm12_queue_tx()
 * \anchor tx_retvals
-* \see rfm12_tx() and rfm12_start_tx()
+* \see rfm12_tx() and rfm12_queue_tx()
 * @{
 */
 //!  The packet data is longer than the internal buffer
@@ -97,14 +100,16 @@ void rfm12_set_callback ((*in_func)(uint8_t, uint8_t *));
 //FIXME: the tx function should return a status, do we need to do this also?
 // uint8_t rfm12_tx_status();
 
+void rfm12_start_tx();
+
 #if (RFM12_NORETURNS)
 //see rfm12.c for more documentation
-void rfm12_start_tx(uint8_t type, uint8_t length);
+void rfm12_queue_tx(uint8_t type, uint8_t length);
 #if !(RFM12_SMALLAPI)
 void rfm12_tx(uint8_t len, uint8_t type, uint8_t *data);
 #endif
 #else
-uint8_t rfm12_start_tx(uint8_t type, uint8_t length);
+uint8_t rfm12_queue_tx(uint8_t type, uint8_t length);
 #if !(RFM12_SMALLAPI)
 uint8_t rfm12_tx(uint8_t len, uint8_t type, uint8_t *data);
 #endif
@@ -118,19 +123,56 @@ void rfm12_poll(void);
 #if RFM12_UART_DEBUG >= 2
 #define UART_DEBUG_PUTC(x) uart_putc((x))
 #else
-#define UART_DEBUG_PUTC(x) (x)
+#define UART_DEBUG_PUTC(x)
 #endif
 
 /************************
  * private control structs
  */
 
+//! The communication buffer structure.
+/** \note Note that this complete buffer is transmitted sequentially,
+* beginning with the sync bytes.
+*/
+//	+-------------trx_format--------------+
+//	|             BUFFER              |sta|
+//	|len|typ |chk  |                  |   |
+//	|   |    |sum  |.... payload ...  |tus|
+//	+-------------------------------------+
+
+/** \note This type is a union of a structure
+* The structure allows access to the data
+* by member access. The array allows access to
+* the same data but with indexes.
+* The Union is then embedded in another struct
+* allowing access to the status property.
+* \see rfm12_queue_tx(), rfm12_tx() and rf_tx_buffer
+* \link https://stackoverflow.com/a/26361366/3343553
+*/
+typedef struct{
+    union{
+        struct{
+            	//! Length byte - number of bytes in buffer.
+            char len;
+                	//! Type field for the simple airlab protocol.
+            char type;
+                	//! Checksum over the former two members.
+            char checksum;
+                	//! Payload of raw bytes to be transmitted.
+            char payload[RFM12_TRX_FRAME_SIZE];
+        };
+        char buffer[RFM12_TRX_FRAME_SIZE + RFM12_TRX_OVERHEAD];
+    };
+    //! Status of either STATUS_FREE or STATUS_OCCUPIED
+    buff_state status;
+} rf_trx_buffer_t;
 //! The transmission buffer structure.
 /** \note Note that this complete buffer is transmitted sequentially,
 * beginning with the sync bytes.
 *
-* \see rfm12_start_tx(), rfm12_tx() and rf_tx_buffer
+* \see rfm12_queue_tx(), rfm12_tx() and rf_tx_buffer
 */
+
 typedef struct {
 	//! Sync bytes for receiver to start filling fifo.
 	uint8_t sync[2];
@@ -250,6 +292,7 @@ extern rf_tx_buffer_t rf_tx_buffer;
 #if !(RFM12_TRANSMIT_ONLY)
 	//buffers for storing incoming transmissions
 	extern rf_rx_buffer_t rf_rx_buffers[2];
+	extern rf_trx_buffer_t rf_rx_new_buffers[2];
 #endif /* !(RFM12_TRANSMIT_ONLY) */
 
 //the control struct
@@ -267,7 +310,7 @@ extern rfm12_control_t ctrl;
 	* \see \ref rxtx_states "rx buffer states", rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
 	static inline uint8_t rfm12_rx_status(void) {
-		return rf_rx_buffers[ctrl.buffer_out_num].status;
+		return rf_rx_new_buffers[ctrl.buffer_out_num].status;
 	}
 
 	//! Inline function to return the rx buffer length field.
@@ -275,7 +318,7 @@ extern rfm12_control_t ctrl;
 	* \see rfm12_rx_status(), rfm12_rx_type(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
 	static inline uint8_t rfm12_rx_len(void) {
-		return rf_rx_buffers[ctrl.buffer_out_num].len;
+		return rf_rx_new_buffers[ctrl.buffer_out_num].len;
 	}
 
 	//! Inline function to return the rx buffer type field.
@@ -283,15 +326,22 @@ extern rfm12_control_t ctrl;
 	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
 	static inline uint8_t rfm12_rx_type(void) {
-		return rf_rx_buffers[ctrl.buffer_out_num].type;
+		return rf_rx_new_buffers[ctrl.buffer_out_num].type;
 	}
 
 	//! Inline function to retreive current rf buffer contents.
 	/** \returns A pointer to the current receive buffer contents
 	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
+	static inline uint8_t *rfm12_rx_entire(void) {
+		return (uint8_t*) rf_rx_new_buffers[ctrl.buffer_out_num].buffer;
+	}
+	//! Inline function to retreive current rf buffer contents.
+	/** \returns A pointer to the current receive payload contents
+	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_clear() and rf_rx_buffer_t
+	*/
 	static inline uint8_t *rfm12_rx_buffer(void) {
-		return (uint8_t*) rf_rx_buffers[ctrl.buffer_out_num].buffer;
+		return (uint8_t*) rf_rx_new_buffers[ctrl.buffer_out_num].payload;
 	}
 #endif /* !(RFM12_TRANSMIT_ONLY) */
 
