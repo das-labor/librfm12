@@ -60,8 +60,9 @@
 * @{
 */
 typedef enum{
-    STATUS_FREE, STATUS_OCCUPIED//,STATUS_COMPLETE?
+    STATUS_FREE, STATUS_OCCUPIED
 } buff_state;
+const buff_state STATUS_COMPLETE = STATUS_OCCUPIED; //For compatibility
 //@}
 
 
@@ -146,8 +147,9 @@ void rfm12_poll(void);
 * the same data but with indexes.
 * The Union is then embedded in another struct
 * allowing access to the status property.
-* \see rfm12_queue_tx(), rfm12_tx() and rf_tx_buffer
 * \link https://stackoverflow.com/a/26361366/3343553
+* \see rfm12_queue_tx(), rfm12_tx() and rf_tx_buffer
+* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_buffer() , rfm12_rx_clear() and rf_rx_buffers
 */
 typedef struct{
     union{
@@ -164,6 +166,7 @@ typedef struct{
         char buffer[RFM12_TRX_FRAME_SIZE + RFM12_TRX_OVERHEAD];
     };
     //! Status of either STATUS_FREE or STATUS_OCCUPIED
+    /** \see \ref rxtx_states "States for rx and tx buffers" */
     buff_state status;
 } rf_trx_buffer_t;
 //! The transmission buffer structure.
@@ -189,34 +192,6 @@ typedef struct {
 	//! Buffer for the raw bytes to be transmitted.
 	uint8_t buffer[RFM12_TX_BUFFER_SIZE];
 } rf_tx_buffer_t;
-
-
-//if receive mode is not disabled (default)
-#if !(RFM12_TRANSMIT_ONLY)
-	//! The receive buffer structure.
-	/** \note Note that there will be two receive buffers of this type,
-	* as double buffering is being employed by this library.
-	*
-	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_buffer() , rfm12_rx_clear() and rf_rx_buffers
-	*/
-	typedef struct {
-		//! Indicates if the buffer is free or completed.
-		/** \see \ref rxtx_states "States for rx and tx buffers" */
-		volatile uint8_t status;
-
-		//! Length byte - number of bytes in buffer.
-		uint8_t len;
-
-		//! Type field for the simple airlab protocol.
-		uint8_t type;
-
-		//! Checksum over the type and length header fields
-		uint8_t checksum;
-
-		//! The actual receive buffer data
-		uint8_t buffer[RFM12_RX_BUFFER_SIZE];
-	} rf_rx_buffer_t;
-#endif /* !(RFM12_TRANSMIT_ONLY) */
 
 
 //! Control and status structure.
@@ -291,8 +266,7 @@ extern rf_tx_buffer_t rf_tx_buffer;
 //if receive mode is not disabled (default)
 #if !(RFM12_TRANSMIT_ONLY)
 	//buffers for storing incoming transmissions
-	extern rf_rx_buffer_t rf_rx_buffers[2];
-	extern rf_trx_buffer_t rf_rx_new_buffers[2];
+	extern rf_trx_buffer_t rf_rx_buffers[2];
 #endif /* !(RFM12_TRANSMIT_ONLY) */
 
 //the control struct
@@ -310,7 +284,7 @@ extern rfm12_control_t ctrl;
 	* \see \ref rxtx_states "rx buffer states", rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
 	static inline uint8_t rfm12_rx_status(void) {
-		return rf_rx_new_buffers[ctrl.buffer_out_num].status;
+		return rf_rx_buffers[ctrl.buffer_out_num].status;
 	}
 
 	//! Inline function to return the rx buffer length field.
@@ -318,7 +292,7 @@ extern rfm12_control_t ctrl;
 	* \see rfm12_rx_status(), rfm12_rx_type(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
 	static inline uint8_t rfm12_rx_len(void) {
-		return rf_rx_new_buffers[ctrl.buffer_out_num].len;
+		return rf_rx_buffers[ctrl.buffer_out_num].len;
 	}
 
 	//! Inline function to return the rx buffer type field.
@@ -326,7 +300,7 @@ extern rfm12_control_t ctrl;
 	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
 	static inline uint8_t rfm12_rx_type(void) {
-		return rf_rx_new_buffers[ctrl.buffer_out_num].type;
+		return rf_rx_buffers[ctrl.buffer_out_num].type;
 	}
 
 	//! Inline function to retreive current rf buffer contents.
@@ -334,14 +308,14 @@ extern rfm12_control_t ctrl;
 	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
 	static inline uint8_t *rfm12_rx_entire(void) {
-		return (uint8_t*) rf_rx_new_buffers[ctrl.buffer_out_num].buffer;
+		return (uint8_t*) rf_rx_buffers[ctrl.buffer_out_num].buffer;
 	}
 	//! Inline function to retreive current rf buffer contents.
 	/** \returns A pointer to the current receive payload contents
 	* \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_clear() and rf_rx_buffer_t
 	*/
 	static inline uint8_t *rfm12_rx_buffer(void) {
-		return (uint8_t*) rf_rx_new_buffers[ctrl.buffer_out_num].payload;
+		return (uint8_t*) rf_rx_buffers[ctrl.buffer_out_num].payload;
 	}
 #endif /* !(RFM12_TRANSMIT_ONLY) */
 

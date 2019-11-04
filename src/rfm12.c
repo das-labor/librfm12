@@ -76,8 +76,7 @@ rf_tx_buffer_t rf_tx_buffer;
 //if receive mode is not disabled (default)
 #if !(RFM12_TRANSMIT_ONLY)
 	//! Buffers and status to receive packets.
-	rf_rx_buffer_t rf_rx_buffers[2];
-	rf_trx_buffer_t rf_rx_new_buffers[2];
+	rf_trx_buffer_t rf_rx_buffers[2];
 #endif /* RFM12_TRANSMIT_ONLY */
 
 //! Global control and status.
@@ -212,7 +211,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 				}
 #endif
 				//Check there is space to accept AND that is not a checksum failure
-				if (rf_rx_new_buffers[ctrl.buffer_in_num].status == STATUS_FREE
+				if (rf_rx_buffers[ctrl.buffer_in_num].status == STATUS_FREE
 						&& !checksum_fail) {
 					ctrl.rfm12_state = STATE_RX_ACTIVE;
 				}
@@ -257,24 +256,24 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 				if (ctrl.bytecount == 0){
 					//Specially check length byte on write
 					if(data>RFM12_TRX_FRAME_SIZE + RFM12_TRX_OVERHEAD){
-						rf_rx_new_buffers[ctrl.buffer_in_num].len=RFM12_TRX_FRAME_SIZE + RFM12_TRX_OVERHEAD;
+						rf_rx_buffers[ctrl.buffer_in_num].len=RFM12_TRX_FRAME_SIZE + RFM12_TRX_OVERHEAD;
 					}
 					else{
-						rf_rx_new_buffers[ctrl.buffer_in_num].len = data;
+						rf_rx_buffers[ctrl.buffer_in_num].len = data;
 					}
 				}
 				else{
-					rf_rx_new_buffers[ctrl.buffer_in_num].buffer[ctrl.bytecount] = data;
+					rf_rx_buffers[ctrl.buffer_in_num].buffer[ctrl.bytecount] = data;
 				}
 				ctrl.bytecount++;
 				//Check to see if bytecount pos is at the length, if so, finished
-				if(rf_rx_new_buffers[ctrl.buffer_in_num].len <= ctrl.bytecount){
+				if(rf_rx_buffers[ctrl.buffer_in_num].len <= ctrl.bytecount){
 					/* if we're here, receiving is done */
 					/* the FIFO will need to be be reset by idle state */
 					//debug
                     UART_DEBUG_PUTC('D');
 
-					rf_rx_new_buffers[ctrl.buffer_in_num].status = STATUS_OCCUPIED;
+					rf_rx_buffers[ctrl.buffer_in_num].status = STATUS_OCCUPIED;
 					//switch to other buffer
 					ctrl.buffer_in_num ^= 1;
 
@@ -599,7 +598,7 @@ rfm12_queue_tx(uint8_t type, uint8_t length) {
 	//warning: without the attribute, gcc will inline this even if -Os is set
 	void __attribute__((noinline)) rfm12_rx_clear(void) {
 			//mark the current buffer as empty
-			rf_rx_new_buffers[ctrl.buffer_out_num].status = STATUS_FREE;
+			rf_rx_buffers[ctrl.buffer_out_num].status = STATUS_FREE;
 
 			//switch to the other buffer
 			ctrl.buffer_out_num ^= 1;
