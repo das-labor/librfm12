@@ -138,8 +138,10 @@ void rfm12_poll(void)
 ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 #endif
 {
-	uint8_t interrupt_high_inactive = nIRQ_PIN & _BV(BIT_nIRQ); // Masked input of interrupt pin for PCINT
-	if(interrupt_high_inactive)return;
+	#ifdef USE_INT_PIN_CHECK
+		uint8_t interrupt_high_inactive = nIRQ_PIN & _BV(BIT_nIRQ); // Masked input of interrupt pin for PCINT
+		if(interrupt_high_inactive)return;
+	#endif
 	RFM12_INT_OFF();
 	uint8_t status;
 	uint8_t recheck_interrupt  = 1;
