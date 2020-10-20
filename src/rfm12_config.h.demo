@@ -119,6 +119,12 @@
 //the interrupt vector
 #define RFM12_INT_VECT (INT1_vect)
 
+//The interrupt pin and pin mask details (needed for pin change interrupt)
+// #define USE_INT_PIN_CHECK
+// #define nIRQ_PORT PORTB
+// #define nIRQ_PIN PINB
+// #define BIT_nIRQ 1
+
 //the interrupt mask register
 #define RFM12_INT_MSK GICR
 
