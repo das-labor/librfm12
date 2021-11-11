@@ -231,7 +231,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 				break;
 			case STATE_TX:
 				ctrl.rfm12_state = STATE_TX_END;
-				if (ctrl.bytecount < ctrl.num_bytes && ctrl.bytecount <RFM12_TX_BUFFER_SIZE+6) {
+				if (ctrl.bytecount < ctrl.num_bytes && ctrl.bytecount <RFM12_TX_BUFFER_SIZE+5) {
 					//Stay in TX mode if there are more bytes to TX
 					ctrl.rfm12_state = STATE_TX;
 				}
@@ -271,7 +271,7 @@ ISR(RFM12_INT_VECT, ISR_NOBLOCK)
 				}
 				ctrl.bytecount++;
 				//Check to see if bytecount pos is at the length, if so, finished
-				if(rf_rx_buffers[ctrl.buffer_in_num].len <= ctrl.bytecount){
+				if(rf_rx_buffers[ctrl.buffer_in_num].len + RFM12_TRX_OVERHEAD <= ctrl.bytecount){
 					/* if we're here, receiving is done */
 					/* the FIFO will need to be be reset by idle state */
 					//debug
