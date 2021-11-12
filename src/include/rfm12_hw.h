@@ -18,6 +18,18 @@
  * @author Peter Fuhrmann, Hans-Gert Dahmen, Soeren Heisrath
  */
 
+  /** \file rfm12_hw.h
+   * \brief rfm12 registers and configuration definitions
+   * \author Hans-Gert Dahmen
+   * \author Peter Fuhrmann
+   * \author Soeren Heisrath
+   * \version 0.9.1
+   * \date 2019/09/10
+   *
+   * This header contains rfm12 definitions of the register names and values
+   * There are also a few calculations macros
+   */
+
 /* Configuration setting command
 	Bit el enables the internal data register.
 	Bit ef enables the FIFO mode. If ef=0 then DATA (pin 6) and DCLK (pin 7) are used for data and data clock output.
